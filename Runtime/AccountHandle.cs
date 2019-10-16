@@ -2,15 +2,14 @@ namespace HouraiTeahouse.Networking {
 
 public readonly struct AccountHandle {
 
-  public readonly uint AccountID;
+  public readonly ulong Id;
 
-  public AccountHandle(uint accountId) {
-    AccountID = AccountID;
+  public AccountHandle(ulong accountId) {
+    Id = accountId;
   }
 
-  public static implicit operator uint(AccountHandle handle) => handle.AccountID;
-  public static implicit operator AccountHandle(uint id) =>
-    new AccountHandle(id);
+  public static implicit operator ulong(AccountHandle handle) => handle.Id;
+  public static implicit operator AccountHandle(ulong id) => new AccountHandle(id);
 
 }
 

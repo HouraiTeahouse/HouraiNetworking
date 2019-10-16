@@ -1,0 +1,16 @@
+{
+    "name": "com.houraiteahouse.networking.Runtime",
+    "references": [
+        "GUID:ddbc6d30d55d88b469485e712835238e",
+        "GUID:60c82de689ffd1949bda7e753c3a1857"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}
