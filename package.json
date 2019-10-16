@@ -1,0 +1,7 @@
+{
+  "author": "Hourai Teahouse",
+  "name": "com.houraiteahouse.networking",
+  "displayName": "Hourai Networking",
+  "version": "0.0.1",
+  "description": "P2P Networking with multiple backends"
+}
