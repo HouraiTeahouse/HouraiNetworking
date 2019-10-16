@@ -1,17 +1,16 @@
-using Discord;
+using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
 
 public class DiscordIntegrationClient : IIntegrationClient {
 
-  internal readonly Discord _discordClient;
+  internal readonly DiscordApp.Discord _discordClient;
 
-  public IntegrationAccountHandle ActiveUser { get; private set; }
+  public AccountHandle ActiveUser { get; private set; }
   public ILobbyManager LobbyManager { get; }
 
-  public DiscordIntegrationClient(int clientId) {
-    _discordClient = new Discord(clientId,
-                                 DiscordCreateFlags.NoRequiredDiscord);
+  public DiscordIntegrationClient(long clientId) {
+    _discordClient = new DiscordApp.Discord(clientId, (ulong)DiscordApp.CreateFlags.NoRequireDiscord);
     LobbyManager = new DiscordLobbyManager(this);
   }
 

@@ -1,38 +1,42 @@
+using System;
+using System.Collections.Generic;
+using DiscordApp = Discord;
+
 namespace HouraiTeahouse.Networking.Discord {
 
 public class DiscordLobbyManager : ILobbyManager {
 
-  internal readonly Discord.LobbyManager _lobbyManager;
-  internal readonly Discord.ActivtyManager _activityManager;
+  internal readonly DiscordApp.LobbyManager _lobbyManager;
+  internal readonly DiscordApp.ActivityManager _activityManager;
 
-  public DiscordiIntegrationLobbyManager(DiscordIntegrationClient client) {
-    _lobbyManager = _client._discordClient.GetLobbyManager();
-    _activityManager = _client._discordClient.GetActivityManager();
+  public DiscordLobbyManager(DiscordIntegrationClient client) {
+    _lobbyManager = client._discordClient.GetLobbyManager();
+    _activityManager = client._discordClient.GetActivityManager();
   }
 
-  public ILobby CreateLobby(LobbyCreateParams createParams) {
+  public LobbyBase CreateLobby(LobbyCreateParams createParams) {
     var txn = _lobbyManager.GetLobbyCreateTransaction();
     txn.SetCapacity(createParams.Capacity);
-    txn.SetType((Discord.LobbyType)createParams.Type);
-    ILobby outputLobby = null;
-    _lobbyManager.CreateLobby(txn, (result, lobby) => {
-        outputLobby = new DiscordLobby(this, lobby.id);
+    txn.SetType((DiscordApp.LobbyType)createParams.Type);
+    LobbyBase outputLobby = null;
+    _lobbyManager.CreateLobby(txn, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
+        outputLobby = new DiscordLobby(this, lobby);
 
-        var secret = _lobbyManager.GetLobbyActivitySecret(lobby.id);
+        var secret = _lobbyManager.GetLobbyActivitySecret(lobby.Id);
 
-        var activity = new Discord.Activity {
+        var activity = new DiscordApp.Activity {
           Party = {
-            Id = lobby.id,
+            Id = lobby.Id.ToString(),
             Size = {
               CurrentSize = 1,
-              MaxSize = createParams.Capacity
+              MaxSize = (int)createParams.Capacity
             }
           },
           Secrets = { Join = secret }
         };
 
         _activityManager.UpdateActivity(activity, res => {});
-    })
+    });
     return outputLobby;
   }
 
@@ -41,14 +45,15 @@ public class DiscordLobbyManager : ILobbyManager {
     builder?.Invoke(queryBuilder);
     var results = new List<LobbyBase>();
     _lobbyManager.Search(queryBuilder.Build(), (result) => {
-        if (result == Discord.Result.OK) {
+        if (result == DiscordApp.Result.Ok) {
           var count = _lobbyManager.LobbyCount();
           if (results.Capacity < count) {
             results.Capacity = count;
           }
           for (var i = 0; i < count; i++) {
             var id = _lobbyManager.GetLobbyId(i);
-            results.Add(new DiscordLobby(this, id));
+            var lobby = _lobbyManager.GetLobby(id);
+            results.Add(new DiscordLobby(this, lobby));
           }
           return;
         }
@@ -58,25 +63,29 @@ public class DiscordLobbyManager : ILobbyManager {
 
   class LobbySearchBuilder : ILobbySearchBuilder {
 
-    readonly LobbySearchQuery _query;
+    readonly DiscordApp.LobbySearchQuery _query;
 
-    public LobbySearchBuilder(Discord.LobbyManager manager) {
+    public LobbySearchBuilder(DiscordApp.LobbyManager manager) {
       _query = manager.GetSearchQuery();
     }
 
     public ILobbySearchBuilder Filter(string key, SearchComparison comparison, string value) {
-      _query.Filterkey, (LobbySearchComparison)comparison,
-                   LobbySearchCast.String, value);
+      _query.Filter(key, (DiscordApp.LobbySearchComparison)comparison,
+                   DiscordApp.LobbySearchCast.String, value);
       return this;
     }
 
     public ILobbySearchBuilder Sort(string key, string value) {
-      _query.Sort(key, LobbSearchCast.String, value);
+      _query.Sort(key, DiscordApp.LobbySearchCast.String, value);
+      return this;
     }
 
-    public ILobbySearchBuilder Limit(int limit) => _query.Limit(limit);
+    public ILobbySearchBuilder Limit(int limit) {
+      _query.Limit((uint)limit);
+      return this;
+    }
 
-    public LobbySearchQuery Build() => _query;
+    public DiscordApp.LobbySearchQuery Build() => _query;
   }
 
 }

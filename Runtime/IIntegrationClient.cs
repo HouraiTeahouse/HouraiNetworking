@@ -3,8 +3,8 @@ namespace HouraiTeahouse.Networking {
 
 public interface IIntegrationClient {
 
-  IntegrationAccountHandle ActiveUser { get; }
-  IIntegrationLobbyManager LobbyManager { get; }
+  AccountHandle ActiveUser { get; }
+  ILobbyManager LobbyManager { get; }
 
 }
 

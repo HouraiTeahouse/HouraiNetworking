@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 
 namespace HouraiTeahouse.Networking {
 
 public interface ILobbyManager {
 
-  ILobby CreateLobby(LobbyCreateParams createParams);
-  IList<ILobby> SearchLobbies(Action<ILobbySearchBuilder> builder);
+  LobbyBase CreateLobby(LobbyCreateParams createParams);
+  IList<LobbyBase> SearchLobbies(Action<ILobbySearchBuilder> builder);
 
 }
 

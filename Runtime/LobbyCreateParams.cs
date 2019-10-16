@@ -2,7 +2,8 @@
 namespace HouraiTeahouse.Networking {
 
 public enum LobbyType {
-  Private, Public
+  Private = 0,
+  Public = 1
 }
 
 public struct LobbyCreateParams {

@@ -2,14 +2,11 @@ namespace HouraiTeahouse.Networking.Steam {
 
 public class SteamIntegrationClient : IIntegrationClient {
 
-  internal readonly Steam _steamClient;
-
-  public IntegrationAccountHandle ActiveUser { get; private set; }
-  public IIntegrationLobbyManager LobbyManager => _steamClient.GetLobbyManager();
+  public AccountHandle ActiveUser { get; private set; }
+  public ILobbyManager LobbyManager { get; }
 
   public SteamIntegrationClient(int clientId) {
-    _steamClient = new Steam(clientId,
-                             steamCreateFlags.NoRequiredsteam);
+    LobbyManager = new SteamLobbyManager();
   }
 
 }
