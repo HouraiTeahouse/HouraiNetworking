@@ -22,7 +22,17 @@ public abstract class LobbyBase : IMetadataContainer {
   public abstract LobbyType Type { get; }
   public abstract ulong OwnerId { get; }
   public abstract uint Capacity { get; }
-  public abstract bool IsLocked { get; }
+  public virtual bool IsLocked => false;
+
+  public event Action<LobbyMember> OnMemberJoin {
+    add => Members.OnMemberJoin += value;
+    remove => Members.OnMemberJoin -= value;
+  }
+  public event Action<LobbyMember> OnMemberLeave{
+    add => Members.OnMemberLeave += value;
+    remove => Members.OnMemberLeave -= value;
+  }
+  public abstract event Action<AccountHandle, byte[]> OnNetworkMessage;
 
   protected abstract int MemberCount { get; }
   protected abstract ulong GetMemberId(int idx);
@@ -50,19 +60,19 @@ public abstract class LobbyBase : IMetadataContainer {
   public abstract int GetMetadataCount();
   public abstract string GetKeyByIndex(int idx);
 
-  public virtual string GetMemberMetadata(AccountHandle handle, string key) => 
+  public virtual string GetMemberMetadata(AccountHandle handle, string key) =>
     throw new NotSupportedException();
-  public virtual void SetMemberMetadata(AccountHandle handle, string key, string value) => 
+  public virtual void SetMemberMetadata(AccountHandle handle, string key, string value) =>
     throw new NotSupportedException();
-  public virtual void DeleteMemberMetadata(AccountHandle handle, string key) => 
-    throw new NotSupportedException();
-
-  public virtual int GetMemberMetadataCount(AccountHandle handle) => 
-    throw new NotSupportedException();
-  public virtual string GetMemberMetadataKey(AccountHandle handle, int idx) => 
+  public virtual void DeleteMemberMetadata(AccountHandle handle, string key) =>
     throw new NotSupportedException();
 
-  public abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, 
+  public virtual int GetMemberMetadataCount(AccountHandle handle) =>
+    throw new NotSupportedException();
+  public virtual string GetMemberMetadataKey(AccountHandle handle, int idx) =>
+    throw new NotSupportedException();
+
+  public abstract void SendNetworkMessage(AccountHandle handle, byte[] msg,
                                           Reliabilty reliabilty = Reliabilty.Reliable);
 
 }

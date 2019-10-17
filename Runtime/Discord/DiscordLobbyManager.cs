@@ -6,12 +6,19 @@ namespace HouraiTeahouse.Networking.Discord {
 
 public class DiscordLobbyManager : ILobbyManager {
 
+  readonly IDictionary<long, DiscordLobby> _lobbies;
+
   internal readonly DiscordApp.LobbyManager _lobbyManager;
   internal readonly DiscordApp.ActivityManager _activityManager;
 
   public DiscordLobbyManager(DiscordIntegrationClient client) {
+    _lobbies = new Dictionary<long, DiscordLobby>();
     _lobbyManager = client._discordClient.GetLobbyManager();
     _activityManager = client._discordClient.GetActivityManager();
+
+    _lobbyManager.OnMemberConnect += _OnMemberJoin;
+    _lobbyManager.OnMemberDisconnect += _OnMemberLeave;
+    _lobbyManager.OnNetworkMessage += _OnNetworkMessage;
   }
 
   public LobbyBase CreateLobby(LobbyCreateParams createParams) {
@@ -21,6 +28,7 @@ public class DiscordLobbyManager : ILobbyManager {
     LobbyBase outputLobby = null;
     _lobbyManager.CreateLobby(txn, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
         outputLobby = new DiscordLobby(this, lobby);
+        _lobbies.Add(lobby.Id, outputLobby);
 
         var secret = _lobbyManager.GetLobbyActivitySecret(lobby.Id);
 
@@ -53,7 +61,9 @@ public class DiscordLobbyManager : ILobbyManager {
           for (var i = 0; i < count; i++) {
             var id = _lobbyManager.GetLobbyId(i);
             var lobby = _lobbyManager.GetLobby(id);
-            results.Add(new DiscordLobby(this, lobby));
+            var discordLobby = new DiscordLobby(this, lobby);
+            _lobbies.Add(lobby.Id, discordLobby);
+            results.Add(discordLobby);
           }
           return;
         }
@@ -87,6 +97,33 @@ public class DiscordLobbyManager : ILobbyManager {
 
     public DiscordApp.LobbySearchQuery Build() => _query;
   }
+
+  void _OnMemberJoin(long lobbyId, long userId) {
+    DiscordLobby lobby;
+    if (_lobbies.TryGetValue(lobbyId, out lobby)) {
+      lobby.Members.Add(new AccountHandle((ulong)userId);
+    }
+  }
+
+  void _OnMemberLeave(long lobbyId, long userId) {
+    DiscordLobby lobby;
+    if (_lobbies.TryGetValue(lobbyId, out lobby)) {
+      lobby.Members.Remove(new AccountHandle((ulong)userId);
+    }
+  }
+
+  DiscordLobby GetLobby(DiscordApp.Lobby data) {
+    DiscordLobby lobby;
+    if (!_lobbies.TryGetValue(lobby.Id, out lobby)) {
+      lobby = new SteamLobby(id);
+      _lobbies.Add(id, data);
+    } else {
+      lobby.Update(data);
+    }
+    return lobby;
+  }
+
+
 
 }
 
