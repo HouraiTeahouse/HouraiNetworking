@@ -17,7 +17,7 @@ public interface IMetadataContainer {
 
 }
 
-public abstract class LobbyBase : IMetadataContainer, IDisposable {
+public abstract class LobbyBase : INetworkSender, IMetadataContainer, IDisposable {
 
   public abstract ulong Id { get; }
   public abstract LobbyType Type { get; }
@@ -84,7 +84,7 @@ public abstract class LobbyBase : IMetadataContainer, IDisposable {
   public virtual string GetMemberMetadataKey(AccountHandle handle, int idx) =>
     throw new NotSupportedException();
 
-  public abstract void SendLobbyMesssage(byte[] msg, int size = -1);
+  public abstract void SendLobbyMessage(byte[] msg, int size = -1);
 
   public abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, int size = -1,
                                           Reliabilty reliabilty = Reliabilty.Reliable);
@@ -93,6 +93,9 @@ public abstract class LobbyBase : IMetadataContainer, IDisposable {
   internal void DispatchLobbyMessage(LobbyMember handle, byte[] msg, uint size) =>
     OnLobbyMessage?.Invoke(handle, msg, size);
   internal void DispatchUpdate() => OnUpdate?.Invoke();
+
+  void INetworkSender.SendMessage(byte[] msg, int size, Reliabilty reliabilty) =>
+    SendLobbyMessage(msg, size);
 
   public virtual void Dispose() {
     Members.Dispose();

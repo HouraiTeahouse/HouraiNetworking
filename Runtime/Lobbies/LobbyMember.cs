@@ -2,12 +2,12 @@ using System;
 
 namespace HouraiTeahouse.Networking {
 
-public class LobbyMember : IMetadataContainer, IDisposable {
+public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
 
   public AccountHandle Id { get; }
   public LobbyBase Lobby { get; }
 
-  public event Action<byte[], uint> OnNetworkMessage;
+  public event NetworkMessageHandler OnNetworkMessage;
   public event Action OnUpdate;
 
   public LobbyMember(LobbyBase lobby, AccountHandle userId) {
@@ -15,9 +15,9 @@ public class LobbyMember : IMetadataContainer, IDisposable {
     Lobby = lobby;
   }
 
-  public void SendNetworkMessage(byte[] msg,
-                                 Reliabilty reliabilty = Reliabilty.Reliable) {
-    Lobby.SendNetworkMessage(Id, msg, reliabilty: reliabilty);
+  public void SendMessage(byte[] msg, int size = -1,
+                          Reliabilty reliabilty = Reliabilty.Reliable) {
+    Lobby.SendNetworkMessage(Id, msg, size, reliabilty: reliabilty);
   }
 
   public string GetMetadata(string key) => Lobby.GetMemberMetadata(Id, key);

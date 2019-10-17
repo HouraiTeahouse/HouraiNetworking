@@ -50,7 +50,7 @@ public class SteamLobby : LobbyBase {
   public override async Task Join() {
     var entry = await SteamMatchmaking.JoinLobby(_id).ToTask<LobbyEnter_t>();
     foreach (var member in Members) {
-      member.SendNetworkMessage(kEmptyMessage);
+      member.SendMessage(kEmptyMessage);
     }
   }
 
@@ -73,7 +73,7 @@ public class SteamLobby : LobbyBase {
     }
   }
 
-  public override void SendLobbyMesssage(byte[] msg, int size = -1) {
+  public override void SendLobbyMessage(byte[] msg, int size = -1) {
     size = size < 0 ? msg.Length : size;
     if (!SteamMatchmaking.SendLobbyChatMsg(_id, msg, size)) {
       Debug.LogError($"Failed to send Steam Lobby Packet.");
