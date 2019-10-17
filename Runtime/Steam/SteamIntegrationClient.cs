@@ -1,4 +1,6 @@
 using Steamworks;
+using System;
+using UnityEngine;
 
 namespace HouraiTeahouse.Networking.Steam {
 
@@ -18,14 +20,17 @@ public class SteamIntegrationClient : IIntegrationClient {
     if (_initialized) return;
     RunSanityChecks();
     if (!SteamAPI.Init()) {
-      throw new Exception("SteamAPI_Init() failed. Refer to Valve's documentation for more information.")
+      throw new Exception("SteamAPI_Init() failed. Refer to Valve's documentation for more information.");
     }
     _initialized = true;
-    var _apiMessageWarningHook = new SteamAPIMessageWarningHook_t(DebugTextHook);
+    var _apiMessageWarningHook = new SteamAPIWarningMessageHook_t(DebugTextHook);
     SteamClient.SetWarningMessageHook(_apiMessageWarningHook);
   }
 
-  public void Update() => SteamAPI.RunCallbacks();
+  public void Update() {
+    SteamAPI.RunCallbacks();
+    _lobbyManager.Update();
+  }
 
   public void Dispose() => SteamAPI.Shutdown();
 

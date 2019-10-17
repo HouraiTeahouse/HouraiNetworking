@@ -9,6 +9,13 @@ public enum SearchComparison {
   NotEqual           = 3,
 }
 
+public enum DistanceFilter {
+  Close = 1,
+  Default = 2,
+  Far = 3,
+  Worldwide = 4,
+}
+
 public interface ILobbySearchBuilder {
 
   ILobbySearchBuilder Filter(string key, SearchComparison comparison, string value);

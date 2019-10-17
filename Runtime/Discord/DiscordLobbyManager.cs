@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
@@ -11,24 +12,32 @@ public class DiscordLobbyManager : ILobbyManager {
   internal readonly DiscordApp.LobbyManager _lobbyManager;
   internal readonly DiscordApp.ActivityManager _activityManager;
 
-  public DiscordLobbyManager(DiscordIntegrationClient client) {
+  public DiscordLobbyManager(DiscordApp.Discord client) {
     _lobbies = new Dictionary<long, DiscordLobby>();
-    _lobbyManager = client._discordClient.GetLobbyManager();
-    _activityManager = client._discordClient.GetActivityManager();
+    _lobbyManager = client.GetLobbyManager();
+    _activityManager = client.GetActivityManager();
 
-    _lobbyManager.OnMemberConnect += _OnMemberJoin;
-    _lobbyManager.OnMemberDisconnect += _OnMemberLeave;
-    _lobbyManager.OnNetworkMessage += _OnNetworkMessage;
+    _lobbyManager.OnNetworkMessage += OnNetworkMessage;
+    _lobbyManager.OnLobbyMessage += OnLobbyMessage;
+
+    _lobbyManager.OnMemberConnect += OnMemberConnect;
+    _lobbyManager.OnMemberDisconnect += OnMemberDisconnect;
+    _lobbyManager.OnMemberUpdate += OnMemberUpdate;
   }
 
-  public LobbyBase CreateLobby(LobbyCreateParams createParams) {
+  public Task<LobbyBase> CreateLobby(LobbyCreateParams createParams) {
     var txn = _lobbyManager.GetLobbyCreateTransaction();
     txn.SetCapacity(createParams.Capacity);
     txn.SetType((DiscordApp.LobbyType)createParams.Type);
-    LobbyBase outputLobby = null;
+    var future = new TaskCompletionSource<LobbyBase>();
     _lobbyManager.CreateLobby(txn, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
-        outputLobby = new DiscordLobby(this, lobby);
+        if (result != DiscordApp.Result.Ok) {
+          future.SetException(new Exception($"Discord Error: {result}"));
+          return;
+        }
+        var outputLobby = new DiscordLobby(this, lobby);
         _lobbies.Add(lobby.Id, outputLobby);
+        future.SetResult(outputLobby);
 
         var secret = _lobbyManager.GetLobbyActivitySecret(lobby.Id);
 
@@ -45,30 +54,29 @@ public class DiscordLobbyManager : ILobbyManager {
 
         _activityManager.UpdateActivity(activity, res => {});
     });
-    return outputLobby;
+    return future.Task;
   }
 
-  public IList<LobbyBase> SearchLobbies(Action<ILobbySearchBuilder> builder) {
+  public Task<IList<LobbyBase>> SearchLobbies(Action<ILobbySearchBuilder> builder) {
     var queryBuilder = new LobbySearchBuilder(_lobbyManager);
     builder?.Invoke(queryBuilder);
-    var results = new List<LobbyBase>();
+    var future = new TaskCompletionSource<IList<LobbyBase>>();
     _lobbyManager.Search(queryBuilder.Build(), (result) => {
-        if (result == DiscordApp.Result.Ok) {
-          var count = _lobbyManager.LobbyCount();
-          if (results.Capacity < count) {
-            results.Capacity = count;
-          }
-          for (var i = 0; i < count; i++) {
-            var id = _lobbyManager.GetLobbyId(i);
-            var lobby = _lobbyManager.GetLobby(id);
-            var discordLobby = new DiscordLobby(this, lobby);
-            _lobbies.Add(lobby.Id, discordLobby);
-            results.Add(discordLobby);
-          }
+        if (result != DiscordApp.Result.Ok) {
+          future.SetException(new Exception($"Discord Error: {result}"));
           return;
         }
+        var count = _lobbyManager.LobbyCount();
+        var results = new LobbyBase[count];
+        for (var i = 0; i < count; i++) {
+          var lobby = _lobbyManager.GetLobby(_lobbyManager.GetLobbyId(i));
+          var discordLobby = new DiscordLobby(this, lobby);
+          _lobbies.Add(lobby.Id, discordLobby);
+          results[i] = discordLobby;
+        }
+        future.SetResult(results);
     });
-    return results;
+    return future.Task;
   }
 
   class LobbySearchBuilder : ILobbySearchBuilder {
@@ -98,32 +106,71 @@ public class DiscordLobbyManager : ILobbyManager {
     public DiscordApp.LobbySearchQuery Build() => _query;
   }
 
-  void _OnMemberJoin(long lobbyId, long userId) {
+  internal void DestroyLobby(DiscordLobby lobby) {
+
+  }
+
+  // Callbacks
+
+  void OnMemberConnect(long lobbyId, long userId) {
     DiscordLobby lobby;
     if (_lobbies.TryGetValue(lobbyId, out lobby)) {
-      lobby.Members.Add(new AccountHandle((ulong)userId);
+      lobby.Members.Add(new AccountHandle((ulong)userId));
     }
   }
 
-  void _OnMemberLeave(long lobbyId, long userId) {
+  void OnMemberDisconnect(long lobbyId, long userId) {
     DiscordLobby lobby;
     if (_lobbies.TryGetValue(lobbyId, out lobby)) {
-      lobby.Members.Remove(new AccountHandle((ulong)userId);
+      lobby.Members.Remove(new AccountHandle((ulong)userId));
     }
+  }
+
+  void OnNetworkMessage(long lobbyId, long userId, byte _, byte[] data) {
+    DiscordLobby lobby;
+    LobbyMember member;
+    var handle = new AccountHandle((ulong)userId);
+    if (!_lobbies.TryGetValue(lobbyId, out lobby)) return;
+    if (!lobby.Members.TryGetValue(handle, out member)) return;
+    member.DispatchNetworkMessage(data);
+  }
+
+  void OnMemberUpdate(long lobbyId, long userId) {
+    DiscordLobby lobby;
+    LobbyMember member;
+    var handle = new AccountHandle((ulong)userId);
+    if (!_lobbies.TryGetValue(lobbyId, out lobby)) return;
+    if (!lobby.Members.TryGetValue(handle, out member)) return;
+    member.DispatchUpdate();
+  }
+
+  void OnLobbyDelete(long lobbyId, string reason) {
+    DiscordLobby lobby;
+    if (_lobbies.TryGetValue(lobbyId, out lobby)) {
+      lobby.Dispose();
+      _lobbies.Remove(lobbyId);
+    }
+  }
+
+  void OnLobbyMessage(long lobbyId, long userId, byte[] data) {
+    DiscordLobby lobby;
+    LobbyMember member;
+    var handle = new AccountHandle((ulong)userId);
+    if (!_lobbies.TryGetValue(lobbyId, out lobby)) return;
+    if (!lobby.Members.TryGetValue(handle, out member)) return;
+    lobby.DispatchLobbyMessage(member, data, (uint)data.Length);
   }
 
   DiscordLobby GetLobby(DiscordApp.Lobby data) {
     DiscordLobby lobby;
-    if (!_lobbies.TryGetValue(lobby.Id, out lobby)) {
-      lobby = new SteamLobby(id);
-      _lobbies.Add(id, data);
+    if (!_lobbies.TryGetValue(data.Id, out lobby)) {
+      lobby = new DiscordLobby(this, data);
+      _lobbies.Add(data.Id, lobby);
     } else {
       lobby.Update(data);
     }
     return lobby;
   }
-
-
 
 }
 

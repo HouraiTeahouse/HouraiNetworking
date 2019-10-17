@@ -1,6 +1,7 @@
 ﻿using Steamworks;
 using System;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace HouraiTeahouse.Networking.Steam {
 
@@ -27,14 +28,14 @@ public static class SteamUtility {
   /// <returns>an exception representing the error, null if no error.</returns>
   public static Exception CreateError(EResult result) {
     if (result == EResult.k_EResultOK) return null;
-    return new NetworkingException($"Steam Networking Error: {result}");
+    return new Exception($"Steam Networking Error: {result}");
   }
 
   public static async Task<T> ToTask<T>(this SteamAPICall_t apiCall) {
     var completionSource = new TaskCompletionSource<T>();
     CallResult<T>.Create((callResult, failure) => {
       if (failure) {
-        completionSource.TrySetException(new NetworkingException("Steam Networking Exception."));
+        completionSource.TrySetException(new Exception("Steam Networking Exception."));
       } else {
         completionSource.TrySetResult(callResult);
       }
