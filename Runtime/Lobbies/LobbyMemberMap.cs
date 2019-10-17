@@ -4,10 +4,12 @@ using System.Collections.Generic;
 
 namespace HouraiTeahouse.Networking {
 
-public class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
+public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
 
   readonly Dictionary<AccountHandle, LobbyMember> _members;
   readonly LobbyBase _lobby;
+
+  public LobbyMember Owner => Get(new AccountHandle(_lobby.OwnerId));
 
   public event Action<LobbyMember> OnMemberJoin;
   public event Action<LobbyMember> OnMemberLeave;
@@ -17,9 +19,9 @@ public class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
     _lobby = lobby;
   }
 
-  public LobbyMember Add(AccountHandle handle) {
+  internal LobbyMember Add(AccountHandle handle) {
     LobbyMember player;
-    if (!_members.TryGetValue(handle, out player)) {
+    if (!_members.TryGetValue(handle, out Lobbymember player)) {
       player = new LobbyMember(_lobby, handle);
       _members.Add(handle, player);
       OnMemberJoin?.Invoke(player);
@@ -28,9 +30,7 @@ public class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
     throw new Exception("Cannot add a member that already exists in the lobby.");
   }
 
-  public LobbyMember Get(AccountHandle handle) => _members[handle];
-
-  public LobbyMember GetOrAdd(AccountHandle handle) {
+  internal LobbyMember GetOrAdd(AccountHandle handle) {
     LobbyMember player;
     if (!_members.TryGetValue(handle, out player)) {
       player = new LobbyMember(_lobby, handle);
@@ -40,20 +40,28 @@ public class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
     return player;
   }
 
-  public bool TryGetValue(AccountHandle handle, out LobbyMember member) =>
-    _members.TryGetValue(handle, out member);
-
-  public bool Contains(AccountHandle handle) => _members.ContainsKey(handle);
-
-  public bool Remove(AccountHandle handle) {
-    LobbyMember player;
-    if (_members.TryGetValue(handle, out player)) {
+  internal bool Remove(AccountHandle handle) {
+    if (_members.TryGetValue(handle, out LobbyMember player)) {
       _members.Remove(handle);
       OnMemberLeave?.Invoke(player);
       return true;
     }
     return false;
   }
+
+  // Read-only accessors are public
+
+  public LobbyMember Get(AccountHandle handle) {
+    if (_members.TryGetValue(handle, out LobbyMember owner)) {
+      return owner;
+    }
+    return default(LobbyMember);
+  }
+
+  public bool TryGetValue(AccountHandle handle, out LobbyMember member) =>
+    _members.TryGetValue(handle, out member);
+
+  public bool Contains(AccountHandle handle) => _members.ContainsKey(handle);
 
   public IEnumerator<LobbyMember> GetEnumerator() => _members.Values.GetEnumerator();
   IEnumerator IEnumerable.GetEnumerator() => _members.Values.GetEnumerator();

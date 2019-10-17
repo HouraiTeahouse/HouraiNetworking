@@ -7,10 +7,13 @@ namespace HouraiTeahouse.Networking {
 public sealed class MessageHandlers : IDisposable {
 
   readonly Action<NetworkMessage>[] _handlers;
+  readonly Dictionary<Type, byte> _headers;
   readonly Dictionary<INetworkReciever, NetworkMessageHandler> _recievers;
 
   public MessageHandlers() {
     _handlers = new Action<NetworkMessage>[byte.MaxValue];
+    _headers = new Dictionary<Type, byte>();
+    _recievers = new Dictionary<INetworkReciever, NetworkMessageHandler>();
   }
 
   public void RegisterHandler(byte code, Action<NetworkMessage> handler) {
@@ -18,8 +21,14 @@ public sealed class MessageHandlers : IDisposable {
     _handlers[code] += handler;
   }
 
-  public void RegisterHandler<T>(byte code, Action<T> handler) where T : INetworkSerializable, new() {
-    if (handler == null) return;
+  public void RegisterHandler<T>(byte header, Action<T> handler) where T : INetworkSerializable, new() {
+    if (handler == null) throw new ArgumentNullException(nameof(handler));
+    if (_headers.TryGetValue(typeof(T), out byte storedHeader)) {
+      if (storedHeader != header) {
+        throw new Exception("Type {typeof(T)} is already registered with the header {storedHeader}");
+      }
+    }
+    _headers[typeof(T)] = header;
     RegisterHandler(code, dataMsg => {
       var message = dataMsg.ReadAs<T>();
       handler(message);
@@ -28,7 +37,52 @@ public sealed class MessageHandlers : IDisposable {
     });
   }
 
-  public void ClearHandlers(byte code) => _handlers[code] = null;
+  public void Serialize<T>(in T msg, ref Serializer serializer) {
+    byte header;
+    if (_headers.TryGetValue(typeof(T), out header)) {
+      serializer.Write(header);
+      msg.Serialize(ref serializer);
+    } else {
+      throw new Exception("Type {typeof(T)} is not registered.");
+    }
+  }
+
+  public void Send<T>(INetworkSender sender, in T msg,
+                      Reliability reliability = Reliability.Reliable) {
+    var serializer = Serializer.Create();
+    Serialize<T>(msg, ref serializer);
+    sender.SendMessage(serializer.AsArray(), serializer.Position, reliability);
+    serializer.Dispose();
+  }
+
+  public void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
+                           Reliability reliability = Reliability.Reliable) {
+    var serializer = Serializer.Create();
+    Serialize<T>(msg, ref serializer);
+    foreach (var sender in senders) {
+      sender.SendMessage(serializer.AsArray(), serializer.Position,
+                        reliability);
+    }
+    serializer.Dispose();
+  }
+
+  void ThrowIfNotRegistered<T>() {
+    if (!_headers.ContainsKey(typeof(T))) {
+      throw new Exception("Type {typeof(T)} is not registered.");
+    }
+  }
+
+  public void ClearHandlers(byte code) {
+    _handlers[code] = null;
+    var keys = new List<Type>();
+    foreach (var kvp in _headers) {
+      if (kvp.Value != code) continue;
+      keys.Add(kvp.Key);
+    }
+    foreach (var key in keys) {
+      _headers.Remove(key);
+    }
+  }
 
   public void Listen(INetworkReciever reciever) {
     if (_recievers.ContainsKey(reciever)) return;
@@ -41,6 +95,9 @@ public sealed class MessageHandlers : IDisposable {
     reciever.OnNetworkMessage += callback;
     _recievers[reciever] = callback;
   }
+
+  public void IsListening(INetworkReciever reciever) =>
+    _recievers.ContainsKey(reciever)
 
   public void StopListening(INetworkReciever reciever) {
     NetworkMessageHandler handler;
@@ -58,6 +115,7 @@ public sealed class MessageHandlers : IDisposable {
       _handlers[i] = null;
     }
     _recievers.Clear();
+    _headers.Clear();
   }
 
 }
