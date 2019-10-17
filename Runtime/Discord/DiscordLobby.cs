@@ -12,25 +12,17 @@ public class DiscordLobby : LobbyBase, IDisposable {
   public override ulong OwnerId => (ulong)_data.OwnerId;
   public override bool IsLocked => _data.Locked;
 
-  public event Action<LobbyMember> OnMemberJoin;
-  public event Action<LobbyMember> OnMemberLeave;
-  public event Action<AccountHandle, byte[]> OnNetworkMessage;
+  public override event Action<AccountHandle, byte[]> OnNetworkMessage;
 
   DiscordApp.Lobby _data;
 
   public DiscordLobby(DiscordLobbyManager manager, DiscordApp.Lobby lobby) : base() {
     _data = lobby;
     _lobbyManager = manager._lobbyManager;
-    _lobbyManager.OnMemberConnect += _OnMemberJoin;
-    _lobbyManager.OnMemberDisconnect += _OnMemberLeave;
-    _lobbyManager.OnNetworkMessage += _OnNetworkMessage;
   }
 
-  public void Dispose() {
-    if (_lobbyManager == null) return;
-    _lobbyManager.OnMemberConnect -= _OnMemberJoin;
-    _lobbyManager.OnMemberDisconnect -= _OnMemberLeave;
-    _lobbyManager.OnNetworkMessage -= _OnNetworkMessage;
+  internal Update(DiscordApp.Lobby data) {
+    _data = data;
   }
 
   protected override int MemberCount => _lobbyManager.MemberCount((long)Id);
@@ -104,8 +96,7 @@ public class DiscordLobby : LobbyBase, IDisposable {
 
   void _OnMemberJoin(long lobbyId, long userId) {
     if (lobbyId != _data.Id) return;
-    var member = Members.Get(new AccountHandle((ulong)userId));
-    OnMemberJoin?.Invoke(member);
+    Members.GetOrAdd(new AccountHandle((ulong)userId));
   }
 
   void _OnMemberLeave(long lobbyId, long userId) {
@@ -113,13 +104,12 @@ public class DiscordLobby : LobbyBase, IDisposable {
     var account = new AccountHandle((ulong)userId);
     var member = Members.Get(account);
     Members.Remove(account);
-    OnMemberLeave?.Invoke(member);
   }
 
   void _OnNetworkMessage(long lobbyId, long userId, byte _, byte[] message) {
     if (lobbyId != _data.Id) return;
     var account = new AccountHandle((ulong)userId);
-    Members.Get(account).DispatchNetworkMessage(message);
+    Members.GetOrAdd(account).DispatchNetworkMessage(message);
     OnNetworkMessage?.Invoke(account, message);
   }
 
