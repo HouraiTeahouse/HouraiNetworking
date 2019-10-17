@@ -85,7 +85,7 @@ public class DiscordLobby : LobbyBase {
     _lobbyManager.SendNetworkMessage(_data.Id, (long)target.Id, (byte)reliability, msg);
   }
 
-  public override void SendLobbyMesssage(byte[] msg, int size = -1) {
+  public override void SendLobbyMessage(byte[] msg, int size = -1) {
     if (size >= 0 && size != msg.Length) {
       var temp = new byte[size];
       Buffer.BlockCopy(msg, 0, temp, 0, size);
