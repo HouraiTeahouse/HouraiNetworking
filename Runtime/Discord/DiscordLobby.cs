@@ -1,9 +1,10 @@
 using System;
+using System.Threading.Tasks;
 using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
 
-public class DiscordLobby : LobbyBase, IDisposable {
+public class DiscordLobby : LobbyBase {
 
   readonly DiscordApp.LobbyManager _lobbyManager;
   public override ulong Id => (ulong)_data.Id;
@@ -12,8 +13,6 @@ public class DiscordLobby : LobbyBase, IDisposable {
   public override ulong OwnerId => (ulong)_data.OwnerId;
   public override bool IsLocked => _data.Locked;
 
-  public override event Action<AccountHandle, byte[]> OnNetworkMessage;
-
   DiscordApp.Lobby _data;
 
   public DiscordLobby(DiscordLobbyManager manager, DiscordApp.Lobby lobby) : base() {
@@ -21,8 +20,9 @@ public class DiscordLobby : LobbyBase, IDisposable {
     _lobbyManager = manager._lobbyManager;
   }
 
-  internal Update(DiscordApp.Lobby data) {
+  internal void Update(DiscordApp.Lobby data) {
     _data = data;
+    DispatchUpdate();
   }
 
   protected override int MemberCount => _lobbyManager.MemberCount((long)Id);
@@ -55,9 +55,10 @@ public class DiscordLobby : LobbyBase, IDisposable {
 
   public override int GetMetadataCount() => _lobbyManager.LobbyMetadataCount(_data.Id);
 
-  public override void Join() {
-    // TODO(james7132): Add secrets
-    _lobbyManager.ConnectLobby(_data.Id, "", (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
+  public override Task Join() {
+    var future = new TaskCompletionSource<bool>();
+    // TODO(james7132): Make sure this works
+    _lobbyManager.ConnectLobby(_data.Id, _data.Secret, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
       if (result != DiscordApp.Result.Ok) {
         // TODO(james7132): Implement
         return;
@@ -67,50 +68,30 @@ public class DiscordLobby : LobbyBase, IDisposable {
       _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliabilty.Reliable, true);
       _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliabilty.Unreliable, false);
     });
+    return future.Task;
   }
 
   public override void Leave() {
     _lobbyManager.DisconnectNetwork(_data.Id);
-    _lobbyManager.DisconnectLobby(_data.Id, (result) => {
-      if (result == DiscordApp.Result.Ok) return;
-      // TODO(james7132): Implement
-    });
+    _lobbyManager.DisconnectLobby(_data.Id, DiscordUtility.LogIfError);
   }
 
   public override void Delete() {
-    _lobbyManager.DeleteLobby(_data.Id, (result) => {
-      if (result == DiscordApp.Result.Ok) {
-        Dispose();
-        return;
-      }
-      // TODO(james7132): Implement
-    });
+    _lobbyManager.DeleteLobby(_data.Id, DiscordUtility.LogIfError);
   }
 
-  public override void SendNetworkMessage(AccountHandle target, byte[] msg,
+  public override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
                                           Reliabilty reliability = Reliabilty.Reliable) {
     _lobbyManager.SendNetworkMessage(_data.Id, (long)target.Id, (byte)reliability, msg);
   }
 
-  // Event Handlers
-
-  void _OnMemberJoin(long lobbyId, long userId) {
-    if (lobbyId != _data.Id) return;
-    Members.GetOrAdd(new AccountHandle((ulong)userId));
-  }
-
-  void _OnMemberLeave(long lobbyId, long userId) {
-    if (lobbyId != _data.Id) return;
-    var account = new AccountHandle((ulong)userId);
-    var member = Members.Get(account);
-    Members.Remove(account);
-  }
-
-  void _OnNetworkMessage(long lobbyId, long userId, byte _, byte[] message) {
-    if (lobbyId != _data.Id) return;
-    var account = new AccountHandle((ulong)userId);
-    Members.GetOrAdd(account).DispatchNetworkMessage(message);
-    OnNetworkMessage?.Invoke(account, message);
+  public override void SendLobbyMesssage(byte[] msg, int size = -1) {
+    if (size >= 0 && size != msg.Length) {
+      var temp = new byte[size];
+      Buffer.BlockCopy(msg, 0, temp, 0, size);
+      msg = temp;
+    }
+    _lobbyManager.SendLobbyMessage(_data.Id, msg, DiscordUtility.LogIfError);
   }
 
 }

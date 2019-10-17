@@ -1,6 +1,8 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace HouraiTeahouse.Networking.Steam {
@@ -20,99 +22,101 @@ public class SteamLobbyManager : ILobbyManager {
 #pragma warning restore 0414
 
   public SteamLobbyManager() {
+    _readBuffer = new byte[kMaxMessageSize];
     _lobbies = new Dictionary<CSteamID, SteamLobby>();
 
     callbackP2PSesssionRequest = Callback<P2PSessionRequest_t>.Create(OnP2PSessionRequest);
     callbackP2PConnectFail = Callback<P2PSessionConnectFail_t>.Create(OnP2PSessionConnectFail);
     callbackLobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
     callbackLobbyDataUpdate = Callback<LobbyDataUpdate_t>.Create(OnLobbyDataUpdate);
-
-    SteamNetworkingUtils.InitializeRelayAccess();
-
-    _readBuffer = new byte[kMaxMessageSize];
   }
 
   public void Update() {
     uint dataSize;
     CSteamID userId;
-    while (SteamNetworking.ReadP2PPacket(ref packetSize)) {
-      byte[] buffer = ArrayPool<byte>.Shared.Get(packetSize);
+    while (SteamNetworking.ReadP2PPacket(_readBuffer, kMaxMessageSize, 
+                                         out dataSize, out userId)) {
+      var handle = new AccountHandle(userId.m_SteamID);
+      foreach (var lobby in _lobbies.Values) {
+        LobbyMember member;
+        if (lobby.Members.TryGetValue(handle, out member)) {
+            member.DispatchNetworkMessage(_readBuffer, (int)dataSize);
+        }
+      }
     }
   }
 
-  public Task<LobbyBase> CreateLobby(LobbyCreateParams createParams) {
-    var type = createParams.Type;
+  public async Task<LobbyBase> CreateLobby(LobbyCreateParams createParams) {
+    ELobbyType type;
+    switch (createParams.Type) {
+      case LobbyType.Private: type = ELobbyType.k_ELobbyTypePrivate; break;
+      default:
+      case LobbyType.Public: type = ELobbyType.k_ELobbyTypePublic; break;
+    }
     var size = createParams.Capacity;
     var lobbyEnter = SteamUtility.WaitFor<LobbyEnter_t>();
-    var result = await SteamMatchmaking.CreateLobby(type, size).ToTask<LobbyCreated_t>();
+    var result = await SteamMatchmaking.CreateLobby(type, (int)size).ToTask<LobbyCreated_t>();
     if (SteamUtility.IsError(result.m_eResult)) {
-      throw new SteamUtility.CreateError(result.m_eResult);
+      throw SteamUtility.CreateError(result.m_eResult);
     }
     await lobbyEnter;
     return AddOrUpdateLobby(new CSteamID(lobbyEnter.Result.m_ulSteamIDLobby));
   }
 
-  public IList<LobbyBase> SearchLobbies(Action<ILobbySearchBuilder> builder) {
-    var queryBuilder = new LobbySearchBuilder(_lobbyManager);
+  public async Task<IList<LobbyBase>> SearchLobbies(Action<ILobbySearchBuilder> builder) {
+    var queryBuilder = new LobbySearchBuilder();
     builder?.Invoke(queryBuilder);
-    var results = new List<LobbyBase>();
-    _lobbyManager.Search(queryBuilder.Build(), (result) => {
-        if (result == DiscordApp.Result.Ok) {
-          var count = _lobbyManager.LobbyCount();
-          if (results.Capacity < count) {
-            results.Capacity = count;
-          }
-          for (var i = 0; i < count; i++) {
-            var id = _lobbyManager.GetLobbyId(i);
-            var lobby = _lobbyManager.GetLobby(id);
-            results.Add(new DiscordLobby(this, lobby));
-          }
-          return;
-        }
-    });
+    var list = await SteamMatchmaking.RequestLobbyList().ToTask<LobbyMatchList_t>();
+    var results = new LobbyBase[list.m_nLobbiesMatching];
+    for (var i = 0; i < list.m_nLobbiesMatching; i++) {
+      var lobbyId = SteamMatchmaking.GetLobbyByIndex(i);
+      if (!lobbyId.IsValid()) continue;
+      results[i] = new SteamLobby(lobbyId);
+    }
     return results;
   }
 
   class LobbySearchBuilder : ILobbySearchBuilder {
-
-    readonly DiscordApp.LobbySearchQuery _query;
-
-    public LobbySearchBuilder(DiscordApp.LobbyManager manager) {
-      _query = manager.GetSearchQuery();
+    public ILobbySearchBuilder Filter(string key, SearchComparison comparison, string value) {
+      var comp = (ELobbyComparison)((int)comparison);
+      SteamMatchmaking.AddRequestLobbyListStringFilter(key, value, comp);
+      return this;
     }
 
-    public ILobbySearchBuilder Filter(string key, SearchComparison comparison, string value) {
-      _query.Filter(key, (DiscordApp.LobbySearchComparison)comparison,
-                   DiscordApp.LobbySearchCast.String, value);
+    public ILobbySearchBuilder Filter(string key, SearchComparison comparison, int value) {
+      var comp = (ELobbyComparison)((int)comparison);
+      SteamMatchmaking.AddRequestLobbyListNumericalFilter(key, value, comp);
       return this;
     }
 
     public ILobbySearchBuilder Sort(string key, string value) {
-      _query.Sort(key, DiscordApp.LobbySearchCast.String, value);
+      int intVal;
+      if (!int.TryParse(value, out intVal)) {
+        throw new ArgumentException("Steam lobby sorting must have a integer value");
+      }
+      SteamMatchmaking.AddRequestLobbyListNearValueFilter(key, intVal);
       return this;
     }
 
     public ILobbySearchBuilder Limit(int limit) {
-      _query.Limit((uint)limit);
+      SteamMatchmaking.AddRequestLobbyListResultCountFilter(limit);
       return this;
     }
-
-    public DiscordApp.LobbySearchQuery Build() => _query;
   }
 
   // Event Handlers
 
   void OnP2PSessionRequest(P2PSessionRequest_t evt) {
     var myId = SteamUser.GetSteamID();
-    var remoteId = new CSteamID(evt.m_steamIDRemote);
-    for (var lobbyId in _lobbies.Keys) {
+    var remoteId = evt.m_steamIDRemote;
+    foreach (var lobbyId in _lobbies.Keys) {
       var count = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
       bool hasMe = false;
       bool hasRemote = false;
       for (var i = 0; i < count; i++) {
-        var memberId = SteamMatchmaking.GetLobbymemberByIndex(lobbyId, i);
-        hasMe |= memberId == id;
-        hasRemote |= memberId == id;
+        var memberId = SteamMatchmaking.GetLobbyMemberByIndex(lobbyId, i);
+        hasMe |= memberId == myId;
+        hasRemote |= memberId== remoteId;
       }
       if (hasMe && hasRemote) {
         Assert.IsTrue(SteamNetworking.AcceptP2PSessionWithUser(remoteId));
@@ -120,6 +124,7 @@ public class SteamLobbyManager : ILobbyManager {
       }
     }
     // Did not find a matching lobby close the session.
+    Debug.LogError($"Steam: Unexpected connection with {remoteId}");
     Assert.IsTrue(SteamNetworking.CloseP2PSessionWithUser(remoteId));
   }
 
@@ -143,8 +148,17 @@ public class SteamLobbyManager : ILobbyManager {
 
   void OnLobbyDataUpdate(LobbyDataUpdate_t evt) {
     var lobbyId = new CSteamID(evt.m_ulSteamIDLobby);
-    SteamLobby lobby = AddOrUpdateLobby(lobbyId);
-    lobby.Update();
+    var lobby = AddOrUpdateLobby(lobbyId);
+    if (evt.m_ulSteamIDLobby == evt.m_ulSteamIDMember) {
+      // Lobby metadata updated
+      lobby.DispatchUpdate();
+    } else {
+      LobbyMember member;
+      var handle = new AccountHandle(evt.m_ulSteamIDMember);
+      if (lobby.Members.TryGetValue(handle, out member)) {
+        member.DispatchUpdate();
+      }
+    }
   }
 
   SteamLobby AddOrUpdateLobby(CSteamID id) {
@@ -155,7 +169,6 @@ public class SteamLobbyManager : ILobbyManager {
     }
     return lobby;
   }
-
 
 }
 

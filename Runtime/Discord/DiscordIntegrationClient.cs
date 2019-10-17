@@ -16,11 +16,11 @@ public class DiscordIntegrationClient : IIntegrationClient {
     var flags = (ulong)DiscordApp.CreateFlags.NoRequireDiscord;
     _discordClient = new DiscordApp.Discord(clientId, flags);
     _lobbyManager = _discordClient.GetLobbyManager();
-    LobbyManager = new DiscordLobbyManager(_lobbyManager);
+    LobbyManager = new DiscordLobbyManager(_discordClient);
   }
 
   public void Update() {
-    LobbyManager._lobbyManager.FlushNetwork();
+    _lobbyManager.FlushNetwork();
     _discordClient.RunCallbacks();
   }
 
