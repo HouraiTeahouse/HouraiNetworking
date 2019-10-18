@@ -17,8 +17,8 @@ public abstract class Peer : IDisposable {
     Lobby = lobby;
     MessageHandlers = new MessageHandlers();
 
-    Lobby.OnNemberJoin += InitConnection;
-    Lobby.OnMemberleave += DestoryConnection;
+    Lobby.OnMemberJoin += InitConnection;
+    Lobby.OnMemberLeave += DestroyConnection;
 
     foreach (var member in Lobby.Members) {
       InitConnection(member);
@@ -43,7 +43,7 @@ public abstract class Peer : IDisposable {
   /// In order to stop processsing messages from the peer,
   /// MessageHandlers.StopListening must be called with the provided LobbyMember.
   /// </remarks>
-  protected abstract void DestoryConnection(LobbyMember member);
+  protected abstract void DestroyConnection(LobbyMember member);
 
   /// <summary>
   /// Helper method to ensure packets are being sent with the correct headers
@@ -53,9 +53,9 @@ public abstract class Peer : IDisposable {
   /// used.
   /// </summary>
   protected void Send<T>(INetworkSender sender, in T msg,
-                         Reliability reliability = Reliability.Reliable)
+                         Reliabilty reliability = Reliabilty.Reliable)
                          where T : INetworkSerializable {
-    MessageHandlers.Broadcast<T>(sender, msg, reliability);
+    MessageHandlers.Send<T>(sender, msg, reliability);
   }
 
   /// <summary>
@@ -66,7 +66,7 @@ public abstract class Peer : IDisposable {
   /// used.
   /// </summary>
   protected void Broadcast<T>(in T msg,
-                              Reliability reliability = Reliability.Reliable)
+                              Reliabilty reliability = Reliabilty.Reliable)
                               where T : INetworkSerializable {
     MessageHandlers.Broadcast<T>(Lobby.Members, msg, reliability);
   }
@@ -75,8 +75,8 @@ public abstract class Peer : IDisposable {
     foreach (var member in Lobby.Members) {
       DestroyConnection(member);
     }
-    Lobby.OnNemberJoin -= InitConnectionImpl;
-    Lobby.OnMemberleave -= DestoryConnectionImpl;
+    Lobby.OnMemberJoin -= InitConnection;
+    Lobby.OnMemberLeave -= DestroyConnection;
     MessageHandlers.Dispose();
   }
 

@@ -19,9 +19,11 @@ public interface IMetadataContainer {
 
 public abstract class LobbyBase : INetworkSender, IMetadataContainer, IDisposable {
 
+
   public abstract ulong Id { get; }
   public abstract LobbyType Type { get; }
   public abstract ulong OwnerId { get; }
+  public abstract ulong UserId { get; }
   public abstract uint Capacity { get; }
   public virtual bool IsLocked => false;
 

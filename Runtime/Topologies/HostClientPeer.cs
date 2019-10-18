@@ -24,10 +24,10 @@ public abstract class HostClientPeer : Peer {
 
   public bool IsHost => Lobby.Members.Me == Lobby.Members.Owner;
 
-  protected FullMeshPeer(LobbyBase lobby) : base(lobby) {
+  protected HostClientPeer(LobbyBase lobby) : base(lobby) {
     _lastSeenHost = Lobby.Members.Owner;
 
-    Lobby.OnUpdate += OnLobbyUpdate();
+    Lobby.OnUpdate += OnLobbyUpdate;
   }
 
   /// <inheritdoc/>
@@ -50,9 +50,10 @@ public abstract class HostClientPeer : Peer {
   /// this call does nothing.
   /// </summary>
   protected void ClientSend<T>(in T msg,
-                               Reliability reliability = Reliability.Reliable) {
+                               Reliabilty reliability = Reliabilty.Reliable)
+                               where T : INetworkSerializable {
     if (IsHost) return;
-    MessageHandlers.SendMessage<T>(Lobby.Members.Owner, msg, reliability);
+    MessageHandlers.Send<T>(Lobby.Members.Owner, msg, reliability);
   }
 
   public override void Dispose() {

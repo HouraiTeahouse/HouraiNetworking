@@ -4,10 +4,13 @@ namespace HouraiTeahouse.Networking.Discord {
 
 public class DiscordIntegrationClient : IIntegrationClient {
 
-  readonly DiscordApp.Discord _discordClient;
+  internal readonly DiscordApp.Discord _discordClient;
   readonly DiscordApp.LobbyManager _lobbyManager;
+  readonly DiscordApp.UserManager _userManager;
 
-  public AccountHandle ActiveUser { get; private set; }
+  public AccountHandle ActiveUser {
+    get => new AccountHandle((ulong)_userManager.GetCurrentUser().Id);
+  }
   public ILobbyManager LobbyManager { get; }
 
   // TODO(james7132): Add log handling
@@ -16,7 +19,8 @@ public class DiscordIntegrationClient : IIntegrationClient {
     var flags = (ulong)DiscordApp.CreateFlags.NoRequireDiscord;
     _discordClient = new DiscordApp.Discord(clientId, flags);
     _lobbyManager = _discordClient.GetLobbyManager();
-    LobbyManager = new DiscordLobbyManager(_discordClient);
+    _userManager = _discordClient.GetUserManager();
+    LobbyManager = new DiscordLobbyManager(this);
   }
 
   public void Update() {

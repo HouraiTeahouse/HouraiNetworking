@@ -9,11 +9,14 @@ public class DiscordLobbyManager : ILobbyManager {
 
   readonly IDictionary<long, DiscordLobby> _lobbies;
 
+  internal readonly DiscordIntegrationClient _integrationClient;
   internal readonly DiscordApp.LobbyManager _lobbyManager;
   internal readonly DiscordApp.ActivityManager _activityManager;
 
-  public DiscordLobbyManager(DiscordApp.Discord client) {
+  public DiscordLobbyManager(DiscordIntegrationClient integrationClient) {
     _lobbies = new Dictionary<long, DiscordLobby>();
+    _integrationClient = integrationClient;
+    var client = _integrationClient._discordClient;
     _lobbyManager = client.GetLobbyManager();
     _activityManager = client.GetActivityManager();
 
