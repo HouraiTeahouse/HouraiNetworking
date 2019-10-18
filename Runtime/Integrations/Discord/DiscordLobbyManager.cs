@@ -107,7 +107,7 @@ public class DiscordLobbyManager : ILobbyManager {
   }
 
   internal void DestroyLobby(DiscordLobby lobby) {
-
+    _lobbies.Remove((long)lobby.Id);
   }
 
   // Callbacks
