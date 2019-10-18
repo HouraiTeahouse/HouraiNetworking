@@ -47,25 +47,25 @@ public sealed class MessageHandlers : IDisposable {
     }
   }
 
-  public void Send<T>(INetworkSender sender, in T msg,
+  public unsafe void Send<T>(INetworkSender sender, in T msg,
                       Reliabilty reliability = Reliabilty.Reliable) 
                       where T : INetworkSerializable {
-    var serializer = Serializer.Create();
+    var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
+    var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
     Serialize<T>(msg, ref serializer);
-    sender.SendMessage(serializer.AsArray(), serializer.Position, reliability);
-    serializer.Dispose();
+    sender.SendMessage(serializer.ToArray(), serializer.Position, reliability);
   }
 
-  public void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
+  public unsafe void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
                            Reliabilty reliability = Reliabilty.Reliable) 
                            where T : INetworkSerializable {
-    var serializer = Serializer.Create();
+    var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
+    var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
     Serialize<T>(msg, ref serializer);
     foreach (var sender in senders) {
-      sender.SendMessage(serializer.AsArray(), serializer.Position,
+      sender.SendMessage(serializer.ToArray(), serializer.Position,
                         reliability);
     }
-    serializer.Dispose();
   }
 
   void ThrowIfNotRegistered<T>() {
@@ -86,13 +86,15 @@ public sealed class MessageHandlers : IDisposable {
     }
   }
 
-  public void Listen(INetworkReciever reciever) {
+  public unsafe void Listen(INetworkReciever reciever) {
     if (_recievers.ContainsKey(reciever)) return;
     NetworkMessageHandler callback = (msg, size) => {
       if (size <= 0) return;
-      var deserializer = new Deserializer(msg);
-      byte header = deserializer.ReadByte();
-      _handlers[header]?.Invoke(new NetworkMessage(reciever, deserializer));
+      fixed (byte* msgPtr = msg) {
+        var deserializer = Deserializer.Create(msgPtr, size);
+        byte header = deserializer.ReadByte();
+        _handlers[header]?.Invoke(new NetworkMessage(reciever, deserializer));
+      }
     };
     reciever.OnNetworkMessage += callback;
     _recievers[reciever] = callback;

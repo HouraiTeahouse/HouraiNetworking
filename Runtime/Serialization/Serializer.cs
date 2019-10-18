@@ -3,140 +3,145 @@ using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace HouraiTeahouse.Networking {
 
-public struct Serializer : IDisposable {
+public unsafe struct Serializer {
 
-  NetBuffer _buffer;
+  byte* _start, _current, _end;
 
-  public bool IsValid => _buffer._buffer != null;
+  public int Position => (int)(_current - _start); 
+  public int Size => (int)(_end - _start);
 
-  public static Serializer Create(int size = -1) {
-    return new Serializer { _buffer = new NetBuffer(size) };
+  public static Serializer Create(byte* buf, uint size) {
+    return new Serializer { 
+      _start = buf,
+      _current = buf,
+      _end = buf + size,
+    };
   }
-
-  public Serializer(byte[] buffer) {
-    _buffer = new NetBuffer(buffer);
-  }
-
-  public short Position => (short)_buffer.Position; 
 
   public byte[] ToArray() {
-    var newArray = new byte[_buffer.AsArraySegment().Count];
-    Array.Copy(_buffer.AsArraySegment().Array, newArray, _buffer.AsArraySegment().Count);
-    return newArray;
+    var array = ArrayPool<byte>.Shared.Rent(Size);
+    fixed (byte* arrayPtr = array) {
+      UnsafeUtility.MemCpy(arrayPtr, _start, Size);
+    }
+    return array;
   }
 
-  public byte[] AsArray() => AsArraySegment().Array;
-
-  internal ArraySegment<byte> AsArraySegment() => _buffer.AsArraySegment();
+  void CheckRemainingSize(int size) {
+    if (_current + size > _end) {
+      throw new IndexOutOfRangeException("Buffer overflow: " + ToString());
+    }
+  }
 
   // http://sqlite.org/src4/doc/trunk/www/varint.wiki
 
   public void Write(UInt32 value) {
     if (value <= 240) {
-      Write((byte)value);
-      return;
+      CheckRemainingSize(1);
+      *_current++ = (byte)value;
+    } else if (value <= 2287) {
+      CheckRemainingSize(2);
+      *_current++ = (byte)((value - 240) / 256 + 241);
+      *_current++ = (byte)((value - 240) % 256);
+    } else if (value <= 67823) {
+      CheckRemainingSize(3);
+      *_current++ = 249;
+      *_current++ = (byte)((value - 2288) / 256);
+      *_current++ = (byte)((value - 2288) % 256);
+    } else if (value <= 16777215) {
+      CheckRemainingSize(4);
+      *_current++ = 250;
+      for (var i = 0; i <= 16; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
+    } else {
+      CheckRemainingSize(5);
+      *_current++ = 251;
+      for (var i = 0; i <= 24; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
     }
-    if (value <= 2287) {
-      Write((byte)((value - 240) / 256 + 241));
-      Write((byte)((value - 240) % 256));
-      return;
-    }
-    if (value <= 67823) {
-      Write((byte)249);
-      Write((byte)((value - 2288) / 256));
-      Write((byte)((value - 2288) % 256));
-      return;
-    }
-    if (value <= 16777215) {
-      Write((byte)250);
-      Write((byte)(value & 0xFF));
-      Write((byte)((value >> 8) & 0xFF));
-      Write((byte)((value >> 16) & 0xFF));
-      return;
-    }
-
-    // all other values of uint
-    Write((byte)251);
-    Write((byte)(value & 0xFF));
-    Write((byte)((value >> 8) & 0xFF));
-    Write((byte)((value >> 16) & 0xFF));
-    Write((byte)((value >> 24) & 0xFF));
   }
 
   public void Write(UInt64 value) {
     if (value <= 240) {
-      Write((byte)value);
+      CheckRemainingSize(1);
+      *_current++ = (byte)value;
     } else if (value <= 2287) {
-      Write((byte)((value - 240) / 256 + 241));
-      Write((byte)((value - 240) % 256));
+      CheckRemainingSize(2);
+      *_current++ = (byte)((value - 240) / 256 + 241);
+      *_current++ = (byte)((value - 240) % 256);
     } else if (value <= 67823) {
-      Write((byte)249);
-      Write((byte)((value - 2288) / 256));
-      Write((byte)((value - 2288) % 256));
+      CheckRemainingSize(3);
+      *_current++ = 249;
+      *_current++ = (byte)((value - 2288) / 256);
+      *_current++ = (byte)((value - 2288) % 256);
     } else if (value <= 16777215) {
-      Write((byte)250);
-      Write((byte)(value & 0xFF));
-      Write((byte)((value >> 8) & 0xFF));
-      Write((byte)((value >> 16) & 0xFF));
+      CheckRemainingSize(4);
+      *_current++ = 250;
+      for (var i = 0; i <= 16; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
     } else if (value <= 4294967295) {
-      Write((byte)251);
-      Write((byte)(value & 0xFF));
-      Write((byte)((value >> 8) & 0xFF));
-      Write((byte)((value >> 16) & 0xFF));
-      Write((byte)((value >> 24) & 0xFF));
+      CheckRemainingSize(5);
+      *_current++ = 251;
+      for (var i = 0; i <= 24; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
     } else if (value <= 1099511627775) {
-      Write((byte)252);
-      Write((byte)(value & 0xFF));
-      Write((byte)((value >> 8) & 0xFF));
-      Write((byte)((value >> 16) & 0xFF));
-      Write((byte)((value >> 24) & 0xFF));
-      Write((byte)((value >> 32) & 0xFF));
+      CheckRemainingSize(6);
+      *_current++ = 252;
+      for (var i = 0; i <= 32; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
     } else if (value <= 281474976710655) {
-      Write((byte)253);
-      Write((byte)(value & 0xFF));
-      Write((byte)((value >> 8) & 0xFF));
-      Write((byte)((value >> 16) & 0xFF));
-      Write((byte)((value >> 24) & 0xFF));
-      Write((byte)((value >> 32) & 0xFF));
-      Write((byte)((value >> 40) & 0xFF));
+      CheckRemainingSize(7);
+      *_current++ = 253;
+      for (var i = 0; i <= 40; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
     } else if (value <= 72057594037927935) {
-      Write((byte)254);
-      Write((byte)(value & 0xFF));
-      Write((byte)((value >> 8) & 0xFF));
-      Write((byte)((value >> 16) & 0xFF));
-      Write((byte)((value >> 24) & 0xFF));
-      Write((byte)((value >> 32) & 0xFF));
-      Write((byte)((value >> 40) & 0xFF));
-      Write((byte)((value >> 48) & 0xFF));
+      CheckRemainingSize(8);
+      *_current++ = 254;
+      for (var i = 0; i <= 48; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
     } else {
-      Write((byte)255);
-      Write((byte)(value & 0xFF));
-      Write((byte)((value >> 8) & 0xFF));
-      Write((byte)((value >> 16) & 0xFF));
-      Write((byte)((value >> 24) & 0xFF));
-      Write((byte)((value >> 32) & 0xFF));
-      Write((byte)((value >> 40) & 0xFF));
-      Write((byte)((value >> 48) & 0xFF));
-      Write((byte)((value >> 56) & 0xFF));
+      CheckRemainingSize(9);
+      *_current++ = 255;
+      for (var i = 0; i <= 56; i += 8) {
+        *_current++ = (byte)(value >> i);
+      }
     }
   }
 
-  public void Write(char value) => _buffer.WriteByte((byte)value);
-  public void Write(byte value) => _buffer.WriteByte(value);
-  public void Write(sbyte value) => _buffer.WriteByte((byte)value);
-  public void Write(short value) {
-    _buffer.WriteByte2((byte)(value & 0xff), (byte)((value >> 8) & 0xff));
+  public void Write(byte value) {
+    CheckRemainingSize(1);
+    *_current++ = value;
   }
 
+  public void Write(sbyte value) => Write((byte)value);
+  public void Write(short value) => Write((ushort)EncodeZigZag(value, 16));
   public void Write(ushort value) {
-    _buffer.WriteByte2((byte)(value & 0xff), (byte)((value >> 8) & 0xff));
+    if (value <= 240) {
+      CheckRemainingSize(1);
+      *_current++ = (byte)value;
+    } else if (value <= 2287) {
+      CheckRemainingSize(2);
+      *_current++ = (byte)((value - 240) / 256 + 241);
+      *_current++ = (byte)((value - 240) % 256);
+    } else {
+      CheckRemainingSize(3);
+      *_current++ = 249;
+      *_current++ = (byte)((value - 2288) / 256);
+      *_current++ = (byte)((value - 2288) % 256);
+    }
   }
 
   public void Write(int value) => Write((uint)EncodeZigZag(value, 32));
-
   public void Write(long value) => Write(EncodeZigZag(value, 64));
 
 #if !INCLUDE_IL2CPP
@@ -163,61 +168,38 @@ public struct Serializer : IDisposable {
 
   public void Write(string value) {
     if (value == null) {
-      _buffer.WriteByte2(0, 0);
+      *_current++ = 0;
+      *_current++ = 0;
       return;
     }
 
     var encoding = SerializationConstants.Encoding;
-    int len = encoding.GetByteCount(value);
-    Write((ushort)(len));
-    _buffer.WriteString(encoding, value);
-  }
-
-  public void Write(bool value) => _buffer.WriteByte((byte)(value ? 1 : 0));
-
-  public void Write(byte[] buffer, int count) {
-    if (count > UInt16.MaxValue) {
-      Debug.LogError("NetworkWriter Write: buffer is too large (" + count + ") bytes. The maximum buffer size is 64K bytes.");
-      return;
+    int count = encoding.GetByteCount(value);
+    Write((ushort)(count));
+    CheckRemainingSize(count + 1);
+    fixed (char* charPtr = value.ToCharArray()) {
+      _current += encoding.GetBytes(charPtr, value.Length, _current, (int)(_end - _current));
     }
-    _buffer.WriteBytes(buffer, (UInt16)count);
   }
 
-  public void Write(byte[] buffer, int offset, int count) {
-    if (count > UInt16.MaxValue) {
-      Debug.LogError("NetworkWriter Write: buffer is too large (" + count + ") bytes. The maximum buffer size is 64K bytes.");
-      return;
+  public void Write(bool value) => Write((byte)(value ? 1 : 0));
+
+  public void Write(byte[] buffer, ushort count) {
+    CheckRemainingSize(count);
+    fixed (byte* bufPtr = buffer) {
+      UnsafeUtility.MemCpy(_current, bufPtr, count);
     }
-    this._buffer.WriteBytesAtOffset(buffer, (ushort)offset, (ushort)count);
+    _current += count;
   }
 
-  public void WriteBytesAndSize(byte[] buffer, int count) {
+  public void WriteBytesAndSize(byte[] buffer, ushort count) {
     if (buffer == null || count == 0) {
-      Write((UInt16)0);
+      Write((ushort)0);
       return;
     }
 
-    if (count > UInt16.MaxValue) {
-      Debug.LogError("NetworkWriter WriteBytesAndSize: buffer is too large (" + count + ") bytes. The maximum buffer size is 64K bytes.");
-      return;
-    }
-
-    Write((UInt16)count);
-    this._buffer.WriteBytes(buffer, (UInt16)count);
-  }
-
-  //NOTE: this will write the entire buffer.. including trailing empty space!
-  public void WriteBytesFull(byte[] buffer) {
-    if (buffer == null) {
-      Write((UInt16)0);
-      return;
-    }
-    if (buffer.Length > UInt16.MaxValue) {
-      Debug.LogError("NetworkWriter WriteBytes: buffer is too large (" + buffer.Length + ") bytes. The maximum buffer size is 64K bytes.");
-      return;
-    }
-    Write((UInt16)buffer.Length);
-    this._buffer.WriteBytes(buffer, (UInt16)buffer.Length);
+    Write(count);
+    Write(buffer, count);
   }
 
   public void Write(Vector2 value) {
@@ -297,9 +279,7 @@ public struct Serializer : IDisposable {
 
   public void Write<T>(in T msg) where T : INetworkSerializable => msg.Serialize(ref this);
 
-  public void SeekZero() => _buffer.SeekZero();
-
-  public void Dispose() => _buffer.Dispose();
+  public void SeekZero() => _current = _start;
 
   static ulong EncodeZigZag(long value, int bitLength) {
     unchecked {

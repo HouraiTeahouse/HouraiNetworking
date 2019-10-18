@@ -1,41 +1,45 @@
-﻿using System;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Collections;
-using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+using System;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 namespace HouraiTeahouse.Networking {
 
-internal static class SerializationConstants {
+public static class SerializationConstants {
 
   public static readonly Encoding Encoding = new UTF8Encoding();
+  public static int kMaxMessageSize = 2048;
 
 }
 
-public struct Deserializer : IDisposable {
+public unsafe struct Deserializer {
 
-  NetBuffer _buffer;
-  public int Size => _buffer.Size;
-  public uint Position => _buffer.Position;
+  byte* _start, _current, _end;
 
-  public static Deserializer Create(int size = -1) {
-    return new Deserializer { _buffer = new NetBuffer(size) };
+  public int Position => (int)(_current - _start); 
+  public int Size => (int)(_end - _start);
+
+  public static Deserializer Create(byte* buf, uint size) {
+    return new Deserializer { 
+      _start = buf,
+      _current = buf,
+      _end = buf + size,
+    };
   }
 
-  public Deserializer(Serializer serializer) {
-    _buffer = new NetBuffer(serializer.AsArray());
-  }
-
-  public Deserializer(byte[] buffer) {
-    _buffer = new NetBuffer(buffer);
-  }
-
-  public void SeekZero() => _buffer.SeekZero();
-
-  public void Replace(byte[] buffer) => _buffer.Replace(buffer);
+  public void SeekZero() => _current = _start;
 
   // http://sqlite.org/src4/doc/trunk/www/varint.wiki
   // NOTE: big endian.
+
+  void CheckRemainingSize(int size) {
+    if (_current + size > _end) {
+      throw new IndexOutOfRangeException("Buffer overflow: " + ToString());
+    }
+  }
 
   public UInt32 ReadUInt32() {
     byte a0 = ReadByte();
@@ -83,25 +87,24 @@ public struct Deserializer : IDisposable {
       throw new IndexOutOfRangeException("ReadPackedUInt64() failure: " + a0);
   }
 
-  public byte ReadByte() => _buffer.ReadByte();
-  public sbyte ReadSByte() => (sbyte)_buffer.ReadByte();
-
-  public short ReadInt16() {
-    ushort value = 0;
-    value |= _buffer.ReadByte();
-    value |= (ushort)(_buffer.ReadByte() << 8);
-    return (short)value;
+  public byte ReadByte() {
+    CheckRemainingSize(1);
+    return *_current++;
   }
+  public sbyte ReadSByte() => (sbyte)ReadByte();
 
   public ushort ReadUInt16() {
-    ushort value = 0;
-    value |= _buffer.ReadByte();
-    value |= (ushort)(_buffer.ReadByte() << 8);
-    return value;
+    byte a0 = ReadByte();
+    if (a0 < 241) return a0;
+    byte a1 = ReadByte();
+    if (a0 >= 241 && a0 <= 248) return (ushort)(240 + 256 * (a0 - ((ushort)241)) + a1);
+    byte a2 = ReadByte();
+    if (a0 == 249) return (ushort)(2288 + (((ushort)256) * a1) + a2);
+    throw new IndexOutOfRangeException("ReadPackedUInt16() failure: " + a0);
   }
 
+  public short ReadInt16() => (short)DecodeZigZag(ReadUInt16());
   public int ReadInt32() => (int)DecodeZigZag(ReadUInt32());
-
   public long ReadInt64() => (long)DecodeZigZag(ReadUInt64());
 
   public float ReadSingle() {
@@ -123,20 +126,25 @@ public struct Deserializer : IDisposable {
   }
 
   public string ReadString() {
-    UInt16 numBytes = ReadUInt16();
-    if (numBytes == 0) return "";
-    return _buffer.ReadString(SerializationConstants.Encoding, numBytes);
+    ushort count = ReadUInt16();
+    if (count == 0) return "";
+    var decodedString = SerializationConstants.Encoding.GetString(_current, (int)count);
+    _current += count;
+    return decodedString;
   }
 
-  public char ReadChar() => (char)_buffer.ReadByte();
-  public bool ReadBoolean() => _buffer.ReadByte() != 0;
+  public char ReadChar() => (char)ReadByte();
+  public bool ReadBoolean() => ReadByte() != 0;
 
   public byte[] ReadBytes(int count) {
     if (count < 0) {
       throw new IndexOutOfRangeException("NetworkReader ReadBytes " + count);
     }
     byte[] value = new byte[count];
-    _buffer.ReadBytes(value, (uint)count);
+    fixed (byte* bufPtr = value) {
+      UnsafeUtility.MemCpy(bufPtr, _current, count);
+    }
+    _current += count;
     return value;
   }
 
@@ -203,7 +211,7 @@ public struct Deserializer : IDisposable {
       return m;
   }
 
-  public override string ToString() => _buffer.ToString();
+  public override string ToString() => $"Deserializer sz:{Size} pos:{Position}";
 
   public TMsg Read<TMsg>() where TMsg : struct, INetworkSerializable {
     var msg = new TMsg();
@@ -226,8 +234,43 @@ public struct Deserializer : IDisposable {
     }
   }
 
-  public void Dispose() => _buffer.Dispose();
+}
+
+// -- helpers for float conversion --
+// This cannot be used with IL2CPP because it cannot convert FieldOffset at the moment
+// Until that is supported the IL2CPP codepath will use BitConverter instead of this. Use
+// of BitConverter is otherwise not optimal as it allocates a byte array for each conversion.
+#if !INCLUDE_IL2CPP
+[StructLayout(LayoutKind.Explicit)]
+internal struct UIntFloat {
+    [FieldOffset(0)]
+    public float floatValue;
+
+    [FieldOffset(0)]
+    public uint intValue;
+
+    [FieldOffset(0)]
+    public double doubleValue;
+
+    [FieldOffset(0)]
+    public ulong longValue;
+}
+
+internal class FloatConversion {
+
+  public static float ToSingle(uint value) {
+    UIntFloat uf = new UIntFloat();
+    uf.intValue = value;
+    return uf.floatValue;
+  }
+
+  public static double ToDouble(ulong value) {
+    UIntFloat uf = new UIntFloat();
+    uf.longValue = value;
+    return uf.doubleValue;
+  }
 
 }
+#endif // !INCLUDE_IL2CPP
 
 }
