@@ -11,7 +11,7 @@ public abstract class FullMeshPeer : Peer {
   protected override void InitConnection(LobbyMember member) =>
     MessageHandlers.Listen(member);
 
-  protected override void InitConnection(LobbyMember member) =>
+  protected override void DestroyConnection(LobbyMember member) =>
     MessageHandlers.StopListening(member);
 
 }

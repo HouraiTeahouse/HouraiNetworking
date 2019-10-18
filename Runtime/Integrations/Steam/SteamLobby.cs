@@ -16,6 +16,7 @@ public class SteamLobby : LobbyBase {
   // to be public.
   public override LobbyType Type => LobbyType.Public;
   public override ulong OwnerId => SteamMatchmaking.GetLobbyOwner(_id).m_SteamID;
+  public override ulong UserId => SteamUser.GetSteamID().m_SteamID;
   public override uint Capacity => (uint)SteamMatchmaking.GetLobbyMemberLimit(_id);
   // Steam lobbies cannot be locked
   public override bool IsLocked => false;

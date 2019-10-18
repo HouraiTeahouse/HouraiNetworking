@@ -6,10 +6,12 @@ namespace HouraiTeahouse.Networking.Discord {
 
 public class DiscordLobby : LobbyBase {
 
+  readonly DiscordIntegrationClient _integrationClient;
   readonly DiscordApp.LobbyManager _lobbyManager;
   public override ulong Id => (ulong)_data.Id;
   public override LobbyType Type => _data.Type == DiscordApp.LobbyType.Public ? LobbyType.Public : LobbyType.Private;
   public override uint Capacity => _data.Capacity;
+  public override ulong UserId => _integrationClient.ActiveUser.Id;
   public override ulong OwnerId => (ulong)_data.OwnerId;
   public override bool IsLocked => _data.Locked;
 
@@ -18,6 +20,7 @@ public class DiscordLobby : LobbyBase {
   public DiscordLobby(DiscordLobbyManager manager, DiscordApp.Lobby lobby) : base() {
     _data = lobby;
     _lobbyManager = manager._lobbyManager;
+    _integrationClient = manager._integrationClient;
   }
 
   internal void Update(DiscordApp.Lobby data) {

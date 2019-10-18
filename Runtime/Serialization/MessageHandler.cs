@@ -29,7 +29,7 @@ public sealed class MessageHandlers : IDisposable {
       }
     }
     _headers[typeof(T)] = header;
-    RegisterHandler(code, dataMsg => {
+    RegisterHandler(header, dataMsg => {
       var message = dataMsg.ReadAs<T>();
       handler(message);
       (message as IDisposable)?.Dispose();
@@ -37,7 +37,7 @@ public sealed class MessageHandlers : IDisposable {
     });
   }
 
-  public void Serialize<T>(in T msg, ref Serializer serializer) {
+  public void Serialize<T>(in T msg, ref Serializer serializer) where T : INetworkSerializable {
     byte header;
     if (_headers.TryGetValue(typeof(T), out header)) {
       serializer.Write(header);
@@ -48,7 +48,8 @@ public sealed class MessageHandlers : IDisposable {
   }
 
   public void Send<T>(INetworkSender sender, in T msg,
-                      Reliability reliability = Reliability.Reliable) {
+                      Reliabilty reliability = Reliabilty.Reliable) 
+                      where T : INetworkSerializable {
     var serializer = Serializer.Create();
     Serialize<T>(msg, ref serializer);
     sender.SendMessage(serializer.AsArray(), serializer.Position, reliability);
@@ -56,7 +57,8 @@ public sealed class MessageHandlers : IDisposable {
   }
 
   public void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
-                           Reliability reliability = Reliability.Reliable) {
+                           Reliabilty reliability = Reliabilty.Reliable) 
+                           where T : INetworkSerializable {
     var serializer = Serializer.Create();
     Serialize<T>(msg, ref serializer);
     foreach (var sender in senders) {
@@ -96,8 +98,8 @@ public sealed class MessageHandlers : IDisposable {
     _recievers[reciever] = callback;
   }
 
-  public void IsListening(INetworkReciever reciever) =>
-    _recievers.ContainsKey(reciever)
+  public bool IsListening(INetworkReciever reciever) =>
+    _recievers.ContainsKey(reciever);
 
   public void StopListening(INetworkReciever reciever) {
     NetworkMessageHandler handler;

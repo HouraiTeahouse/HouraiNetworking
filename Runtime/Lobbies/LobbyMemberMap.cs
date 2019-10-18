@@ -9,6 +9,7 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   readonly Dictionary<AccountHandle, LobbyMember> _members;
   readonly LobbyBase _lobby;
 
+  public LobbyMember Me => Get(new AccountHandle(_lobby.UserId));
   public LobbyMember Owner => Get(new AccountHandle(_lobby.OwnerId));
 
   public event Action<LobbyMember> OnMemberJoin;
@@ -20,8 +21,7 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   }
 
   internal LobbyMember Add(AccountHandle handle) {
-    LobbyMember player;
-    if (!_members.TryGetValue(handle, out Lobbymember player)) {
+    if (!_members.TryGetValue(handle, out LobbyMember player)) {
       player = new LobbyMember(_lobby, handle);
       _members.Add(handle, player);
       OnMemberJoin?.Invoke(player);
