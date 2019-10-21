@@ -2,11 +2,11 @@
   "author": "Hourai Teahouse",
   "name": "com.houraiteahouse.networking",
   "displayName": "Hourai Networking",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "P2P Networking with multiple backends",
   "dependencies": {
-    "com.houraiteahouse.core": "https://github.com/HouraiTeahouse/HouraiCore.git",
-    "com.discord.game-sdk": "https://github.com/HouraiTeahouse/Discord-Game-SDK.git",
-    "com.rlabrecque.steamworks": "https://github.com/HouraiTeahouse/Steamworks.NET.git"
+    "com.houraiteahouse.core": "1.0.0",
+    "com.discord.game-sdk": "1.0.0",
+    "com.rlabrecque.steamworks": "11.0.0"
   }
 }
