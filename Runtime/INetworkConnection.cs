@@ -8,7 +8,7 @@ public delegate void NetworkMessageHandler(byte[] msg, uint size);
 public interface INetworkSender {
 
     void SendMessage(byte[] msg, int size = -1,
-                     Reliabilty reliabilty = Reliabilty.Reliable);
+                     Reliability reliability = Reliability.Reliable);
 
 }
 
@@ -22,7 +22,7 @@ public interface INetworkConnection : INetworkSender, INetworkReciever {
 public static unsafe class INetworkConnectionExtensions {
 
   public static void Send<T>(this INetworkSender connection, byte header, 
-                             in T message, Reliabilty reliablity = Reliabilty.Reliable) 
+                             in T message, Reliability reliablity = Reliability.Reliable) 
                              where T : INetworkSerializable {
     var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
     var writer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
@@ -34,7 +34,7 @@ public static unsafe class INetworkConnectionExtensions {
 
   public static void SendToAll<T, TConnection>(this IEnumerable<TConnection> connections, byte header,
                                                in T message, 
-                                               Reliabilty reliablity = Reliabilty.Reliable) 
+                                               Reliability reliablity = Reliability.Reliable) 
                                                where T : INetworkSerializable
                                                where TConnection : INetworkSender {
     var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];

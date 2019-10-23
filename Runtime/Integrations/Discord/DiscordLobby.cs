@@ -69,8 +69,8 @@ public class DiscordLobby : LobbyBase {
       }
       _data = lobby;
       _lobbyManager.ConnectNetwork(lobby.Id);
-      _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliabilty.Reliable, true);
-      _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliabilty.Unreliable, false);
+      _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Reliable, true);
+      _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Unreliable, false);
     });
     return future.Task;
   }
@@ -85,7 +85,7 @@ public class DiscordLobby : LobbyBase {
   }
 
   internal override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
-                                          Reliabilty reliability = Reliabilty.Reliable) {
+                                          Reliability reliability = Reliability.Reliable) {
     Assert.IsTrue(size <= msg.Length);
     if (size >= 0 && size != msg.Length) {
       var temp = new byte[size];

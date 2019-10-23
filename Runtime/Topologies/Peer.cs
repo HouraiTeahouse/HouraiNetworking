@@ -53,7 +53,7 @@ public abstract class Peer : IDisposable {
   /// used.
   /// </summary>
   protected void Send<T>(INetworkSender sender, in T msg,
-                         Reliabilty reliability = Reliabilty.Reliable)
+                         Reliability reliability = Reliability.Reliable)
                          where T : INetworkSerializable {
     MessageHandlers.Send<T>(sender, msg, reliability);
   }
@@ -66,7 +66,7 @@ public abstract class Peer : IDisposable {
   /// used.
   /// </summary>
   protected void Broadcast<T>(in T msg,
-                              Reliabilty reliability = Reliabilty.Reliable)
+                              Reliability reliability = Reliability.Reliable)
                               where T : INetworkSerializable {
     MessageHandlers.Broadcast<T>(Lobby.Members, msg, reliability);
   }

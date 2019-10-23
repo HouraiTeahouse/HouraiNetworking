@@ -65,9 +65,9 @@ public class SteamLobby : LobbyBase {
   }
 
   internal override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
-                                          Reliabilty reliabilty = Reliabilty.Reliable) {
+                                          Reliability reliability = Reliability.Reliable) {
     var userId = new CSteamID(target.Id);
-    var type = reliabilty == Reliabilty.Reliable ? EP2PSend.k_EP2PSendReliable : EP2PSend.k_EP2PSendUnreliable;
+    var type = reliability == Reliability.Reliable ? EP2PSend.k_EP2PSendReliable : EP2PSend.k_EP2PSendUnreliable;
     size = size < 0 ? msg.Length : size;
     if (!SteamNetworking.SendP2PPacket(userId, msg, (uint)size, type)) {
       Debug.LogError($"Failed to send Steam P2P Packet to {userId}");
