@@ -148,6 +148,14 @@ public unsafe struct Deserializer {
     return value;
   }
 
+  public void ReadBytes(byte* buffer, int count) {
+    if (count < 0) {
+      throw new IndexOutOfRangeException("NetworkReader ReadBytes " + count);
+    }
+    UnsafeUtility.MemCpy(buffer, _current, count);
+    _current += count;
+  }
+
   public byte[] ReadBytesAndSize() {
     ushort sz = ReadUInt16();
     if (sz == 0) return null;
