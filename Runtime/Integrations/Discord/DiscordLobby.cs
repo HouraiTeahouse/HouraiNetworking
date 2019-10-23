@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using DiscordApp = Discord;
+using UnityEngine.Assertions;
 
 namespace HouraiTeahouse.Networking.Discord {
 
@@ -83,8 +84,15 @@ public class DiscordLobby : LobbyBase {
     _lobbyManager.DeleteLobby(_data.Id, DiscordUtility.LogIfError);
   }
 
-  public override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
+  internal override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
                                           Reliabilty reliability = Reliabilty.Reliable) {
+    Assert.IsTrue(size <= msg.Length);
+    if (size >= 0 && size != msg.Length) {
+      var temp = new byte[size];
+      Buffer.BlockCopy(msg, 0, temp, 0, size);
+      ArrayPool<byte>.Shared.Return(msg);
+      msg = temp;
+    }
     _lobbyManager.SendNetworkMessage(_data.Id, (long)target.Id, (byte)reliability, msg);
   }
 

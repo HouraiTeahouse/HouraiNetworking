@@ -88,7 +88,7 @@ public abstract class LobbyBase : INetworkSender, IMetadataContainer, IDisposabl
 
   public abstract void SendLobbyMessage(byte[] msg, int size = -1);
 
-  public abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, int size = -1,
+  internal abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, int size = -1,
                                           Reliabilty reliabilty = Reliabilty.Reliable);
 
   internal void DispatchDelete() => OnDelete?.Invoke();
