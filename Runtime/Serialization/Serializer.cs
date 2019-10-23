@@ -192,6 +192,12 @@ public unsafe struct Serializer {
     _current += count;
   }
 
+  public void Write(byte* buffer, ushort count) {
+    CheckRemainingSize(count);
+    UnsafeUtility.MemCpy(_current, buffer, count);
+    _current += count;
+  }
+
   public void WriteBytesAndSize(byte[] buffer, ushort count) {
     if (buffer == null || count == 0) {
       Write((ushort)0);
