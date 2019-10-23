@@ -69,7 +69,7 @@ public sealed class MessageHandlers : IDisposable {
   }
 
   public unsafe void Send<T>(INetworkSender sender, in T msg,
-                      Reliabilty reliability = Reliabilty.Reliable) 
+                      Reliability reliability = Reliability.Reliable) 
                       where T : INetworkSerializable {
     var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
     var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
@@ -78,7 +78,7 @@ public sealed class MessageHandlers : IDisposable {
   }
 
   public unsafe void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
-                           Reliabilty reliability = Reliabilty.Reliable) 
+                           Reliability reliability = Reliability.Reliable) 
                            where T : INetworkSerializable {
     var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
     var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);

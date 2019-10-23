@@ -29,12 +29,12 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
   public string GetKeyByIndex(int idx) => Lobby.GetMemberMetadataKey(Id, idx);
 
   public void SendMessage(byte[] msg, int size = -1,
-                          Reliabilty reliabilty = Reliabilty.Reliable) {
+                          Reliability reliability = Reliability.Reliable) {
     size = size < 0 ? msg.Length : size;
     if (MessageProcessor != null) {
       MessageProcessor.Apply(ref msg, ref size);
     }
-    Lobby.SendNetworkMessage(Id, msg, size, reliabilty: reliabilty);
+    Lobby.SendNetworkMessage(Id, msg, size, reliability: reliability);
   }
 
   internal void DispatchNetworkMessage(byte[] msg, int size = -1) {

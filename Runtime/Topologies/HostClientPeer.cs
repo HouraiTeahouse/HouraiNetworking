@@ -50,7 +50,7 @@ public abstract class HostClientPeer : Peer {
   /// this call does nothing.
   /// </summary>
   protected void ClientSend<T>(in T msg,
-                               Reliabilty reliability = Reliabilty.Reliable)
+                               Reliability reliability = Reliability.Reliable)
                                where T : INetworkSerializable {
     if (IsHost) return;
     MessageHandlers.Send<T>(Lobby.Members.Owner, msg, reliability);

@@ -66,9 +66,9 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   public IEnumerator<LobbyMember> GetEnumerator() => _members.Values.GetEnumerator();
   IEnumerator IEnumerable.GetEnumerator() => _members.Values.GetEnumerator();
 
-  public void Broadcast(byte[] msg, int size = -1, Reliabilty reliabilty = Reliabilty.Reliable) {
+  public void Broadcast(byte[] msg, int size = -1, Reliability reliability = Reliability.Reliable) {
     foreach (var member in _members.Values) {
-      member.SendMessage(msg, size, reliabilty: reliabilty);
+      member.SendMessage(msg, size, reliability: reliability);
     }
   }
 
