@@ -19,13 +19,22 @@ public interface IMetadataContainer {
 
 public abstract class LobbyBase : INetworkSender, IMetadataContainer, IDisposable {
 
-
   public abstract ulong Id { get; }
   public abstract LobbyType Type { get; }
   public abstract ulong OwnerId { get; }
   public abstract ulong UserId { get; }
   public abstract uint Capacity { get; }
   public virtual bool IsLocked => false;
+
+  public ConnectionStats ConnectionStats {
+    get {
+      var stats = new ConnectionStats();
+      foreach (var member in Members) {
+        stats += member.ConnectionStats;
+      }
+      return stats;
+    }
+  }
 
   public event Action<LobbyMember> OnMemberJoin {
     add => Members.OnMemberJoin += value;

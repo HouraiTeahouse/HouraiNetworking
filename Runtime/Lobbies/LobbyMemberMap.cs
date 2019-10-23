@@ -63,8 +63,11 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
 
   public bool Contains(AccountHandle handle) => _members.ContainsKey(handle);
 
-  public IEnumerator<LobbyMember> GetEnumerator() => _members.Values.GetEnumerator();
-  IEnumerator IEnumerable.GetEnumerator() => _members.Values.GetEnumerator();
+  public Dictionary<AccountHandle, LobbyMember>.ValueCollection.Enumerator
+    GetEnumerator() => _members.Values.GetEnumerator();
+
+  IEnumerator<LobbyMember> IEnumerable<LobbyMember>.GetEnumerator() => GetEnumerator();
+  IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
   public void Broadcast(byte[] msg, int size = -1, Reliability reliability = Reliability.Reliable) {
     foreach (var member in _members.Values) {
