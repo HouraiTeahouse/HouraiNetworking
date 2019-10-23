@@ -10,18 +10,23 @@ public sealed class MessageHandlers : IDisposable {
   readonly Dictionary<Type, byte> _headers;
   readonly Dictionary<INetworkReciever, NetworkMessageHandler> _recievers;
 
+  public delegate void Handler<T>(ref T message);
+  public delegate void ReceiverHandler<T>(INetworkReciever reciever, ref T message);
+
   public MessageHandlers() {
     _handlers = new Action<NetworkMessage>[byte.MaxValue];
     _headers = new Dictionary<Type, byte>();
     _recievers = new Dictionary<INetworkReciever, NetworkMessageHandler>();
   }
 
+  public bool CanHandle(byte header) => _handlers[header] != null;
+
   public void RegisterHandler(byte code, Action<NetworkMessage> handler) {
     if (handler == null) return;
     _handlers[code] += handler;
   }
 
-  public void RegisterHandler<T>(byte header, Action<T> handler) where T : INetworkSerializable, new() {
+  public void RegisterHandler<T>(byte header, Handler<T> handler) where T : INetworkSerializable, new() {
     if (handler == null) throw new ArgumentNullException(nameof(handler));
     if (_headers.TryGetValue(typeof(T), out byte storedHeader)) {
       if (storedHeader != header) {
@@ -31,7 +36,23 @@ public sealed class MessageHandlers : IDisposable {
     _headers[typeof(T)] = header;
     RegisterHandler(header, dataMsg => {
       var message = dataMsg.ReadAs<T>();
-      handler(message);
+      handler(ref message);
+      (message as IDisposable)?.Dispose();
+      ObjectPool<T>.Shared.Return(message);
+    });
+  }
+
+  public void RegisterHandler<T>(byte header, ReceiverHandler<T> handler) where T : INetworkSerializable, new() {
+    if (handler == null) throw new ArgumentNullException(nameof(handler));
+    if (_headers.TryGetValue(typeof(T), out byte storedHeader)) {
+      if (storedHeader != header) {
+        throw new Exception("Type {typeof(T)} is already registered with the header {storedHeader}");
+      }
+    }
+    _headers[typeof(T)] = header;
+    RegisterHandler(header, dataMsg => {
+      var message = dataMsg.ReadAs<T>();
+      handler(dataMsg.Reciever, ref message);
       (message as IDisposable)?.Dispose();
       ObjectPool<T>.Shared.Return(message);
     });
