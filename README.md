@@ -19,15 +19,34 @@ Platform based P2P networking with multiple backends.
 Hourai Networking acts as a wrapper around these backends to provide support.
 Some features may not be uniform across all platforms.
 
-|Feature|Steam|Discord|Epic Games|
-|:------|:---:|:-----:|:--------:|
-|Implemenation|✔️|✔️|Planned|
-|Lobbies|✔️|✔️|?|
-|Matchmaking|✔️|✔️|?|
-|Custom Metadata|✔️|✔️|?|
-|Host Migration|✔️|✔️|?|
+|Feature|Steam|Discord|Direct UDP|Epic Games|
+|:------|:---:|:-----:|:--------:|:--------:|
+|Implemenation|✔️|✔️|Planned|Planned|
+|Lobbies|✔️|✔️|❌|?|
+|Matchmaking|✔️|✔️|❌|?|
+|Custom Metadata|✔️|✔️|?|?|
+|Host Migration|✔️|✔️|?|?|
 
 ---
+
+## Installation
+Backroll is most easily installable via Unity Package Manager. In Unity 2018.3+,
+add the following to your `Packages/manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "com.houraiteahouse.networking": "0.1.1"
+  },
+  "scopedRegistries": [
+    {
+      "name": "Hourai Teahouse",
+      "url": "https://upm.houraiteahouse.net",
+      "scopes": ["com.houraiteahouse"]
+    }
+  ]
+}
+```
 
 ## FAQ:
 

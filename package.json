@@ -9,9 +9,9 @@
   "repository": "github:HouraiTeahouse/HouraiNetworking",
   "dependencies": {
     "com.houraiteahouse.core": "1.0.0",
+    "com.houraiteahouse.lz4": "2.0.0",
     "com.discord.game-sdk": "1.0.0",
-    "com.rlabrecque.steamworks": "11.0.0",
-    "com.houraiteahouse.lz4": "2.0.0"
+    "com.rlabrecque.steamworks": "11.0.0"
   },
   "publishConfig": {
     "registry": "https://upm.houraiteahouse.net"
