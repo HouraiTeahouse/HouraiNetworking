@@ -12,9 +12,12 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
 
   public AccountHandle Id { get; }
   public LobbyBase Lobby { get; }
+  public ConnectionStats ConnectionStats => _stats;
 
   public event NetworkMessageHandler OnNetworkMessage;
   public event Action OnUpdate;
+
+  ConnectionStats _stats;
 
   public LobbyMember(LobbyBase lobby, AccountHandle userId) {
     Id = userId;
@@ -34,11 +37,19 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
     if (MessageProcessor != null) {
       MessageProcessor.Apply(ref msg, ref size);
     }
+
+    _stats.PacketsSent++;
+    _stats.BytesSent += (ulong)size;
+
     Lobby.SendNetworkMessage(Id, msg, size, reliability: reliability);
   }
 
   internal void DispatchNetworkMessage(byte[] msg, int size = -1) {
     size = size < 0 ? msg.Length : size;
+
+    _stats.PacketsRecieved++;
+    _stats.BytesRecieved += (ulong)size;
+
     if (MessageProcessor != null) {
       MessageProcessor.Unapply(ref msg, ref size);
     }
