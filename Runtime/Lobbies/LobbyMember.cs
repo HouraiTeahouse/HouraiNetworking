@@ -4,6 +4,12 @@ namespace HouraiTeahouse.Networking {
 
 public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
 
+  public static IMessageProcessor MessageProcessor;
+
+  static LobbyMember() {
+    MessageProcessor = new LZFCompressor();
+  }
+
   public AccountHandle Id { get; }
   public LobbyBase Lobby { get; }
 
@@ -15,11 +21,6 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
     Lobby = lobby;
   }
 
-  public void SendMessage(byte[] msg, int size = -1,
-                          Reliabilty reliabilty = Reliabilty.Reliable) {
-    Lobby.SendNetworkMessage(Id, msg, size, reliabilty: reliabilty);
-  }
-
   public string GetMetadata(string key) => Lobby.GetMemberMetadata(Id, key);
   public void SetMetadata(string key, string value) => Lobby.SetMemberMetadata(Id, key, value);
   public void DeleteMetadata(string key) => Lobby.DeleteMemberMetadata(Id, key);
@@ -27,8 +28,20 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
   public int GetMetadataCount() => Lobby.GetMemberMetadataCount(Id);
   public string GetKeyByIndex(int idx) => Lobby.GetMemberMetadataKey(Id, idx);
 
+  public void SendMessage(byte[] msg, int size = -1,
+                          Reliabilty reliabilty = Reliabilty.Reliable) {
+    size = size < 0 ? msg.Length : size;
+    if (MessageProcessor != null) {
+      MessageProcessor.Apply(ref msg, ref size);
+    }
+    Lobby.SendNetworkMessage(Id, msg, size, reliabilty: reliabilty);
+  }
+
   internal void DispatchNetworkMessage(byte[] msg, int size = -1) {
     size = size < 0 ? msg.Length : size;
+    if (MessageProcessor != null) {
+      MessageProcessor.Unapply(ref msg, ref size);
+    }
     OnNetworkMessage?.Invoke(msg, (uint)size);
   }
 

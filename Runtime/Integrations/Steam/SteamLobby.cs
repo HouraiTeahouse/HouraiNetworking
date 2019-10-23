@@ -64,7 +64,7 @@ public class SteamLobby : LobbyBase {
     Leave();
   }
 
-  public override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
+  internal override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
                                           Reliabilty reliabilty = Reliabilty.Reliable) {
     var userId = new CSteamID(target.Id);
     var type = reliabilty == Reliabilty.Reliable ? EP2PSend.k_EP2PSendReliable : EP2PSend.k_EP2PSendUnreliable;
