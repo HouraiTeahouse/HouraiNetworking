@@ -11,23 +11,41 @@ public unsafe struct Serializer {
 
   byte* _start, _current, _end;
 
-  public int Position => (int)(_current - _start); 
+  public int Position => (int)(_current - _start);
   public int Size => (int)(_end - _start);
 
   public static Serializer Create(byte* buf, uint size) {
-    return new Serializer { 
+    return new Serializer {
       _start = buf,
       _current = buf,
       _end = buf + size,
     };
   }
 
-  public byte[] ToArray() {
-    var array = ArrayPool<byte>.Shared.Rent(Size);
-    fixed (byte* arrayPtr = array) {
-      UnsafeUtility.MemCpy(arrayPtr, _start, Size);
+  public void CopyTo(byte* buffer) =>
+    UnsafeUtility.MemCpy(buffer, _start, Position);
+
+  public void CopyTo(byte[] array, int offset = 0) {
+    if (offset < 0 || offset + Position >= array.Length) {
+      throw new IndexOutOfRangeException();
     }
+    fixed (byte* arrayPtr = array) {
+      arrayPtr += 0;
+      CopyTo(arrayPtr);
+    }
+  }
+
+  public byte[] ToArray() {
+    var array = ArrayPool<byte>.Shared.Rent(Position);
+    CopyTo(array);
     return array;
+  }
+
+  public string ToBase64String() {
+    var array =  ToArray();
+    var str = Convert.ToBase64String(array, 0, Position);
+    ArrayPool<byte>.Shared.Return(array);
+    return str;
   }
 
   void CheckRemainingSize(int size) {
@@ -206,6 +224,20 @@ public unsafe struct Serializer {
 
     Write(count);
     Write(buffer, count);
+  }
+
+  public void WriteStruct<T>(ref T value) where T : struct {
+    var size = UnsafeUtility.SizeOf<T>();
+    CheckRemainingSize(size);
+    UnsafeUtility.CopyStructureToPtr(ref value, _current);
+    _current += size;
+  }
+
+  public void WriteStruct<T>(void* buffer, int count) where T : struct {
+    var size = UnsafeUtility.SizeOf<T>();
+    CheckRemainingSize(size * count);
+    UnsafeUtility.MemCpy(_current, buffer, size * count);
+    _current += size * count;
   }
 
   public void Write(Vector2 value) {
