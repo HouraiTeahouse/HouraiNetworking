@@ -5,7 +5,7 @@ namespace HouraiTeahouse.Networking.Topologies {
 /// </summary>
 public abstract class FullMeshPeer : Peer {
 
-  protected FullMeshPeer(LobbyBase lobby) : base(lobby) {
+  protected FullMeshPeer(Lobby lobby) : base(lobby) {
   }
 
   protected override void InitConnection(LobbyMember member) =>

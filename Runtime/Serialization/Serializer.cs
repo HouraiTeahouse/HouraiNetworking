@@ -30,8 +30,7 @@ public unsafe struct Serializer {
       throw new IndexOutOfRangeException();
     }
     fixed (byte* arrayPtr = array) {
-      arrayPtr += 0;
-      CopyTo(arrayPtr);
+      CopyTo(arrayPtr + offset);
     }
   }
 

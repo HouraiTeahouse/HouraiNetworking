@@ -5,7 +5,7 @@ using UnityEngine.Assertions;
 
 namespace HouraiTeahouse.Networking.Discord {
 
-public class DiscordLobby : LobbyBase {
+public class DiscordLobby : Lobby {
 
   readonly DiscordIntegrationClient _integrationClient;
   readonly DiscordApp.LobbyManager _lobbyManager;
@@ -29,7 +29,7 @@ public class DiscordLobby : LobbyBase {
     DispatchUpdate();
   }
 
-  protected override int MemberCount => _lobbyManager.MemberCount((long)Id);
+  public override int MemberCount => _lobbyManager.MemberCount((long)Id);
   protected override ulong GetMemberId(int idx) =>
     (ulong)_lobbyManager.GetMemberUserId(_data.Id, idx);
 
@@ -52,6 +52,27 @@ public class DiscordLobby : LobbyBase {
     var txn = _lobbyManager.GetLobbyUpdateTransaction(_data.Id);
     txn.DeleteMetadata(key);
     _lobbyManager.UpdateLobby(_data.Id, txn, (result) => {
+      if (result == DiscordApp.Result.Ok) return;
+      // TODO(james7132): Implement
+    });
+  }
+
+  public override string GetMemberMetadata(AccountHandle handle, string key) =>
+    _lobbyManager.GetMemberMetadataValue(_data.Id, (long)handle.Id, key);
+
+  public override void SetMemberMetadata(AccountHandle handle, string key, string value) {
+    var txn = _lobbyManager.GetMemberUpdateTransaction(_data.Id, (long)handle.Id);
+    txn.SetMetadata(key, value);
+    _lobbyManager.UpdateMember(_data.Id, (long)handle.Id, txn, (result) => {
+      if (result == DiscordApp.Result.Ok) return;
+      // TODO(james7132): Implement
+    });
+  }
+  
+  public override void DeleteMemberMetadata(AccountHandle handle, string key) {
+    var txn = _lobbyManager.GetMemberUpdateTransaction(_data.Id, (long)handle.Id);
+    txn.DeleteMetadata(key);
+    _lobbyManager.UpdateMember(_data.Id, (long)handle.Id, txn, (result) => {
       if (result == DiscordApp.Result.Ok) return;
       // TODO(james7132): Implement
     });

@@ -24,10 +24,10 @@ public abstract class HostClientPeer : Peer {
 
   public bool IsHost => Lobby.Members.Me == Lobby.Members.Owner;
 
-  protected HostClientPeer(LobbyBase lobby) : base(lobby) {
+  protected HostClientPeer(Lobby lobby) : base(lobby) {
     _lastSeenHost = Lobby.Members.Owner;
 
-    Lobby.OnUpdate += OnLobbyUpdate;
+    Lobby.OnUpdated += OnLobbyUpdated;
   }
 
   /// <inheritdoc/>
@@ -58,12 +58,12 @@ public abstract class HostClientPeer : Peer {
 
   public override void Dispose() {
     base.Dispose();
-    Lobby.OnUpdate -= OnLobbyUpdate;
+    Lobby.OnUpdated -= OnLobbyUpdated;
   }
 
   // Callbacks
 
-  void OnLobbyUpdate() {
+  void OnLobbyUpdated() {
     if (_lastSeenHost == Lobby.Members.Owner) return;
     _lastSeenHost = Lobby.Members.Owner;
     // Restructure the listeners so that the topology holds.
