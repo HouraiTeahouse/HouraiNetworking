@@ -19,27 +19,37 @@ public unsafe struct Deserializer {
 
   byte* _start, _current, _end;
 
-  public int Position => (int)(_current - _start); 
+  public int Position => (int)(_current - _start);
   public int Size => (int)(_end - _start);
 
   public static Deserializer Create(byte* buf, uint size) {
-    return new Deserializer { 
+    return new Deserializer {
       _start = buf,
       _current = buf,
       _end = buf + size,
     };
   }
 
-  public void SeekZero() => _current = _start;
+  public static T FromBase64String(string encoded) where T : INetworkSerializable {
+    var bytes = Convert.FromBase64String(encoded);
+    fixed (byte* ptr = bytes) {
+      var obj = new T();
+      var deserializer = Create(ptr, bytes.Length);
+      obj.Deserialize(ref deserializer);
+      return obj;
+    }
+  }
 
-  // http://sqlite.org/src4/doc/trunk/www/varint.wiki
-  // NOTE: big endian.
+  public void SeekZero() => _current = _start;
 
   void CheckRemainingSize(int size) {
     if (_current + size > _end) {
       throw new IndexOutOfRangeException("Buffer overflow: " + ToString());
     }
   }
+
+  // http://sqlite.org/src4/doc/trunk/www/varint.wiki
+  // NOTE: big endian.
 
   public UInt32 ReadUInt32() {
     byte a0 = ReadByte();
