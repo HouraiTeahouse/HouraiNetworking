@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace HouraiTeahouse.Networking.Steam {
 
-public class SteamLobby : LobbyBase {
+public class SteamLobby : Lobby {
 
   // Dummy empty message to kick off connections
   static readonly byte[] kEmptyMessage = new byte[0];
@@ -23,7 +23,7 @@ public class SteamLobby : LobbyBase {
 
   public SteamLobby(CSteamID id) => _id = id;
 
-  protected override int MemberCount =>
+  public override int MemberCount =>
     SteamMatchmaking.GetNumLobbyMembers(_id);
   protected override ulong GetMemberId(int idx) =>
     SteamMatchmaking.GetLobbyMemberByIndex(_id, idx).m_SteamID;
@@ -47,6 +47,19 @@ public class SteamLobby : LobbyBase {
 
   public override int GetMetadataCount() =>
     SteamMatchmaking.GetLobbyDataCount(_id);
+
+  public override string GetMemberMetadata(AccountHandle handle, string key) =>
+    SteamMatchmaking.GetLobbyMemberData(_id, new CSteamID(handle.Id), key);
+
+  public override void SetMemberMetadata(AccountHandle handle, string key, string value) {
+    if (handle.Id != UserId) {
+      throw new InvalidOperationException("Cannnot set the metadata of a Steam lobby member other than the current user.");
+    }
+    SteamMatchmaking.SetLobbyMemberData(_id, key, value);
+  }
+
+  public override void DeleteMemberMetadata(AccountHandle handle, string key) =>
+    SetMemberMetadata(handle, key, string.Empty);
 
   public override async Task Join() {
     var entry = await SteamMatchmaking.JoinLobby(_id).ToTask<LobbyEnter_t>();

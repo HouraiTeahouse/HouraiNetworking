@@ -7,7 +7,7 @@ namespace HouraiTeahouse.Networking {
 public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
 
   readonly Dictionary<AccountHandle, LobbyMember> _members;
-  readonly LobbyBase _lobby;
+  readonly Lobby _lobby;
 
   public LobbyMember Me => Get(new AccountHandle(_lobby.UserId));
   public LobbyMember Owner => Get(new AccountHandle(_lobby.OwnerId));
@@ -15,7 +15,7 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   public event Action<LobbyMember> OnMemberJoin;
   public event Action<LobbyMember> OnMemberLeave;
 
-  public LobbyMemberMap(LobbyBase lobby) {
+  public LobbyMemberMap(Lobby lobby) {
     _members = new Dictionary<AccountHandle, LobbyMember>();
     _lobby = lobby;
   }

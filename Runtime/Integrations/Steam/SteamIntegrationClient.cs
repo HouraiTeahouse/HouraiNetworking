@@ -13,7 +13,7 @@ public class SteamIntegrationClient : IIntegrationClient {
     _lobbyManager = new SteamLobbyManager();
   }
 
-  public AccountHandle ActiveUser { get; private set; }
+  public AccountHandle ActiveUser => new AccountHandle(SteamUser.GetSteamID().m_SteamID);
   public ILobbyManager LobbyManager => _lobbyManager;
 
   public SteamIntegrationClient() {

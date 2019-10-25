@@ -17,7 +17,7 @@ public interface IMetadataContainer {
 
 }
 
-public abstract class LobbyBase : INetworkSender, IMetadataContainer, IDisposable {
+public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
 
   public abstract ulong Id { get; }
   public abstract LobbyType Type { get; }
@@ -45,25 +45,27 @@ public abstract class LobbyBase : INetworkSender, IMetadataContainer, IDisposabl
     remove => Members.OnMemberLeave -= value;
   }
 
-  public event Action OnUpdate;
-  public event Action OnDelete;
+  public event Action OnUpdated;
+  public event Action OnDeleted;
   public event Action<LobbyMember, byte[], uint> OnLobbyMessage;
   public event Action<LobbyMember, byte[], uint> OnNetworkMessage;
   public event Action<LobbyMember> OnMemberUpdated;
 
-  protected abstract int MemberCount { get; }
+  public abstract int MemberCount { get; }
   protected abstract ulong GetMemberId(int idx);
 
   public LobbyMemberMap Members { get; }
 
-  protected LobbyBase() {
+  protected Lobby() {
     Members = new LobbyMemberMap(this);
     OnMemberJoin += (member) => {
       member.OnNetworkMessage += (buf, size) => {
         OnNetworkMessage?.Invoke(member, buf, size);
       };
-      member.OnUpdate += () => OnMemberUpdated?.Invoke(member);
+
+      member.OnUpdated += () => OnMemberUpdated?.Invoke(member);
     };
+    OnMemberLeave += (member) => member.DispatchDisconnect();
     var count = MemberCount;
     for (int i = 0; i < count; i++) {
       Members.Get(GetMemberId(i));
@@ -100,18 +102,18 @@ public abstract class LobbyBase : INetworkSender, IMetadataContainer, IDisposabl
   internal abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, int size = -1,
                                           Reliability reliability = Reliability.Reliable);
 
-  internal void DispatchDelete() => OnDelete?.Invoke();
+  internal void DispatchDelete() => OnDeleted?.Invoke();
   internal void DispatchLobbyMessage(LobbyMember handle, byte[] msg, uint size) =>
     OnLobbyMessage?.Invoke(handle, msg, size);
-  internal void DispatchUpdate() => OnUpdate?.Invoke();
+  internal void DispatchUpdate() => OnUpdated?.Invoke();
 
   void INetworkSender.SendMessage(byte[] msg, int size, Reliability reliability) =>
     SendLobbyMessage(msg, size);
 
   public virtual void Dispose() {
     Members.Dispose();
-    OnUpdate = null;
-    OnDelete = null;
+    OnUpdated = null;
+    OnDeleted = null;
     OnNetworkMessage = null;
     OnMemberUpdated = null;
   }

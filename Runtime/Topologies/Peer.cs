@@ -10,10 +10,10 @@ namespace HouraiTeahouse.Networking.Topologies {
 /// </summary>
 public abstract class Peer : IDisposable {
 
-  public readonly LobbyBase Lobby;
+  public readonly Lobby Lobby;
   protected readonly MessageHandlers MessageHandlers;
 
-  protected Peer(LobbyBase lobby) {
+  protected Peer(Lobby lobby) {
     Lobby = lobby;
     MessageHandlers = new MessageHandlers();
 

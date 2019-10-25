@@ -6,8 +6,8 @@ namespace HouraiTeahouse.Networking {
 
 public interface ILobbyManager {
 
-  Task<LobbyBase> CreateLobby(LobbyCreateParams createParams);
-  Task<IList<LobbyBase>> SearchLobbies(Action<ILobbySearchBuilder> builder);
+  Task<Lobby> CreateLobby(LobbyCreateParams createParams);
+  Task<IList<Lobby>> SearchLobbies(Action<ILobbySearchBuilder> builder = null);
 
 }
 

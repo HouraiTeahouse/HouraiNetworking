@@ -30,11 +30,11 @@ public unsafe struct Deserializer {
     };
   }
 
-  public static T FromBase64String(string encoded) where T : INetworkSerializable {
+  public static T FromBase64String<T>(string encoded) where T : INetworkSerializable, new() {
     var bytes = Convert.FromBase64String(encoded);
     fixed (byte* ptr = bytes) {
       var obj = new T();
-      var deserializer = Create(ptr, bytes.Length);
+      var deserializer = Create(ptr, (uint)bytes.Length);
       obj.Deserialize(ref deserializer);
       return obj;
     }

@@ -46,7 +46,7 @@ public class SteamLobbyManager : ILobbyManager {
     }
   }
 
-  public async Task<LobbyBase> CreateLobby(LobbyCreateParams createParams) {
+  public async Task<Lobby> CreateLobby(LobbyCreateParams createParams) {
     ELobbyType type;
     switch (createParams.Type) {
       case LobbyType.Private: type = ELobbyType.k_ELobbyTypePrivate; break;
@@ -63,11 +63,11 @@ public class SteamLobbyManager : ILobbyManager {
     return AddOrUpdateLobby(new CSteamID(lobbyEnter.Result.m_ulSteamIDLobby));
   }
 
-  public async Task<IList<LobbyBase>> SearchLobbies(Action<ILobbySearchBuilder> builder) {
+  public async Task<IList<Lobby>> SearchLobbies(Action<ILobbySearchBuilder> builder = null) {
     var queryBuilder = new LobbySearchBuilder();
     builder?.Invoke(queryBuilder);
     var list = await SteamMatchmaking.RequestLobbyList().ToTask<LobbyMatchList_t>();
-    var results = new LobbyBase[list.m_nLobbiesMatching];
+    var results = new Lobby[list.m_nLobbiesMatching];
     for (var i = 0; i < list.m_nLobbiesMatching; i++) {
       var lobbyId = SteamMatchmaking.GetLobbyByIndex(i);
       if (!lobbyId.IsValid()) continue;

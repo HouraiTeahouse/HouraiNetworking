@@ -28,11 +28,11 @@ public class DiscordLobbyManager : ILobbyManager {
     _lobbyManager.OnMemberUpdate += OnMemberUpdate;
   }
 
-  public Task<LobbyBase> CreateLobby(LobbyCreateParams createParams) {
+  public Task<Lobby> CreateLobby(LobbyCreateParams createParams) {
     var txn = _lobbyManager.GetLobbyCreateTransaction();
     txn.SetCapacity(createParams.Capacity);
     txn.SetType((DiscordApp.LobbyType)createParams.Type);
-    var future = new TaskCompletionSource<LobbyBase>();
+    var future = new TaskCompletionSource<Lobby>();
     _lobbyManager.CreateLobby(txn, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
         if (result != DiscordApp.Result.Ok) {
           future.SetException(new Exception($"Discord Error: {result}"));
@@ -60,17 +60,17 @@ public class DiscordLobbyManager : ILobbyManager {
     return future.Task;
   }
 
-  public Task<IList<LobbyBase>> SearchLobbies(Action<ILobbySearchBuilder> builder) {
+  public Task<IList<Lobby>> SearchLobbies(Action<ILobbySearchBuilder> builder) {
     var queryBuilder = new LobbySearchBuilder(_lobbyManager);
     builder?.Invoke(queryBuilder);
-    var future = new TaskCompletionSource<IList<LobbyBase>>();
+    var future = new TaskCompletionSource<IList<Lobby>>();
     _lobbyManager.Search(queryBuilder.Build(), (result) => {
         if (result != DiscordApp.Result.Ok) {
           future.SetException(new Exception($"Discord Error: {result}"));
           return;
         }
         var count = _lobbyManager.LobbyCount();
-        var results = new LobbyBase[count];
+        var results = new Lobby[count];
         for (var i = 0; i < count; i++) {
           var lobby = _lobbyManager.GetLobby(_lobbyManager.GetLobbyId(i));
           var discordLobby = new DiscordLobby(this, lobby);

@@ -10,18 +10,27 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
     MessageProcessor = new LZFCompressor();
   }
 
+  public enum ConnectionState {
+    Connected,
+    Interrupted,
+    Disconnected
+  }
+
   public AccountHandle Id { get; }
-  public LobbyBase Lobby { get; }
+  public Lobby Lobby { get; }
   public ConnectionStats ConnectionStats => _stats;
+  public ConnectionState State { get; private set; }
 
   public event NetworkMessageHandler OnNetworkMessage;
-  public event Action OnUpdate;
+  public event Action OnUpdated;
+  public event Action OnDisconnected;
 
   ConnectionStats _stats;
 
-  public LobbyMember(LobbyBase lobby, AccountHandle userId) {
+  public LobbyMember(Lobby lobby, AccountHandle userId) {
     Id = userId;
     Lobby = lobby;
+    State = ConnectionState.Connected;
   }
 
   public string GetMetadata(string key) => Lobby.GetMemberMetadata(Id, key);
@@ -56,11 +65,19 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
     OnNetworkMessage?.Invoke(msg, (uint)size);
   }
 
-  internal void DispatchUpdate() => OnUpdate?.Invoke();
+  internal void DispatchUpdate() => OnUpdated?.Invoke();
+
+  internal void DispatchDisconnect() {
+    if (State == ConnectionState.Disconnected) return;
+    OnDisconnected?.Invoke();
+    State = ConnectionState.Disconnected;
+    Dispose();
+  }
 
   public void Dispose() {
     OnNetworkMessage = null;
-    OnUpdate = null;
+    OnUpdated = null;
+    OnDisconnected = null;
   }
 
 }
