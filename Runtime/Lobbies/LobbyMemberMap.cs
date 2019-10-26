@@ -15,7 +15,7 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   public event Action<LobbyMember> OnMemberJoin;
   public event Action<LobbyMember> OnMemberLeave;
 
-  public LobbyMemberMap(Lobby lobby) {
+  internal LobbyMemberMap(Lobby lobby) {
     _members = new Dictionary<AccountHandle, LobbyMember>();
     _lobby = lobby;
   }
