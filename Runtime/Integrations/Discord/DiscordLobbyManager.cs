@@ -9,7 +9,7 @@ namespace HouraiTeahouse.Networking.Discord {
 
 public class DiscordLobbyManager : ILobbyManager {
 
-  readonly IDictionary<long, DiscordLobby> _connectedLobbies;
+  readonly Dictionary<long, DiscordLobby> _connectedLobbies;
 
   internal readonly DiscordIntegrationClient _integrationClient;
   internal readonly DiscordApp.LobbyManager _lobbyManager;
@@ -139,6 +139,12 @@ public class DiscordLobbyManager : ILobbyManager {
     _lobbyManager.DisconnectNetwork(id);
     _lobbyManager.DisconnectLobby(id, DiscordUtility.LogIfError);
     lobby.Dispose();
+  }
+
+  internal void Update() {
+    foreach (var lobby in _connectedLobbies.Values) {
+      lobby.FlushChanges();
+    }
   }
 
   // Callbacks

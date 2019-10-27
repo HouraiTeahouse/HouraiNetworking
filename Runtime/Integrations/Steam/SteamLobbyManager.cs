@@ -11,7 +11,7 @@ public class SteamLobbyManager : ILobbyManager {
 
   public const int kMaxMessageSize = 1200;
 
-  readonly IDictionary<CSteamID, SteamLobby> _connectedLobbies;
+  readonly Dictionary<CSteamID, SteamLobby> _connectedLobbies;
   readonly byte[] _readBuffer;
 
 #pragma warning disable 0414

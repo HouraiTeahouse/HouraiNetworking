@@ -30,7 +30,7 @@ public sealed class MessageHandlers : IDisposable {
     if (handler == null) throw new ArgumentNullException(nameof(handler));
     if (_headers.TryGetValue(typeof(T), out byte storedHeader)) {
       if (storedHeader != header) {
-        throw new Exception("Type {typeof(T)} is already registered with the header {storedHeader}");
+        throw new InvalidOperationException($"Type {typeof(T)} is already registered with the header {storedHeader}");
       }
     }
     _headers[typeof(T)] = header;
@@ -46,7 +46,7 @@ public sealed class MessageHandlers : IDisposable {
     if (handler == null) throw new ArgumentNullException(nameof(handler));
     if (_headers.TryGetValue(typeof(T), out byte storedHeader)) {
       if (storedHeader != header) {
-        throw new Exception("Type {typeof(T)} is already registered with the header {storedHeader}");
+        throw new InvalidOperationException($"Type {typeof(T)} is already registered with the header {storedHeader}");
       }
     }
     _headers[typeof(T)] = header;
@@ -64,7 +64,7 @@ public sealed class MessageHandlers : IDisposable {
       serializer.Write(header);
       msg.Serialize(ref serializer);
     } else {
-      throw new Exception("Type {typeof(T)} is not registered.");
+      throw new InvalidOperationException($"Type {typeof(T)} is not registered.");
     }
   }
 
@@ -91,7 +91,7 @@ public sealed class MessageHandlers : IDisposable {
 
   void ThrowIfNotRegistered<T>() {
     if (!_headers.ContainsKey(typeof(T))) {
-      throw new Exception("Type {typeof(T)} is not registered.");
+      throw new InvalidOperationException($"Type {typeof(T)} is not registered.");
     }
   }
 

@@ -19,8 +19,6 @@ public class SteamLobby : Lobby {
   public override ulong OwnerId => SteamMatchmaking.GetLobbyOwner(_id).m_SteamID;
   public override ulong UserId => SteamUser.GetSteamID().m_SteamID;
   public override uint Capacity => (uint)SteamMatchmaking.GetLobbyMemberLimit(_id);
-  // Steam lobbies cannot be locked
-  public override bool IsLocked => false;
 
   readonly SteamLobbyManager _manager;
 
@@ -82,6 +80,11 @@ public class SteamLobby : Lobby {
     // members leave them.
     // TODO(james7132): Find a clean way to force close a lobby.
     Leave();
+  }
+
+  public override void FlushChanges() {
+    Debug.LogWarning("[Steam] SteamLobby.FlushChanges(): Metadata changes are " +
+                     "automatically flushed and cannot be manually flushed.");
   }
 
   internal override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,

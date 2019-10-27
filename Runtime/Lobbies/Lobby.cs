@@ -24,7 +24,10 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   public abstract ulong OwnerId { get; }
   public abstract ulong UserId { get; }
   public abstract uint Capacity { get; }
-  public virtual bool IsLocked => false;
+  public virtual bool IsLocked {
+    get => false;
+    set => throw new NotSupportedException();
+  }
 
   public ConnectionStats ConnectionStats {
     get {
@@ -98,6 +101,8 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
     throw new NotSupportedException();
 
   public abstract void SendLobbyMessage(byte[] msg, int size = -1);
+
+  public virtual void FlushChanges() {}
 
   internal abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, int size = -1,
                                           Reliability reliability = Reliability.Reliable);
