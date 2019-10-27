@@ -44,10 +44,12 @@ public class DiscordLobby : Lobby {
     _data = lobby;
     _manager = manager;
     _lobbyManager = manager._lobbyManager;
+    Debug.Log(_lobbyManager);
     _integrationClient = manager._integrationClient;
 
     _updateTxn = null;
     _memberUpdateTxns = null;
+    RefreshMembers();
   }
 
   internal void Update(DiscordApp.Lobby data) {
@@ -55,7 +57,7 @@ public class DiscordLobby : Lobby {
     DispatchUpdate();
   }
 
-  public override int MemberCount => _lobbyManager.MemberCount((long)Id);
+  public override int MemberCount => _lobbyManager.MemberCount(_data.Id);
   protected override ulong GetMemberId(int idx) =>
     (ulong)_lobbyManager.GetMemberUserId(_data.Id, idx);
 

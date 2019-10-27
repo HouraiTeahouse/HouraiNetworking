@@ -143,10 +143,6 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
       member.OnUpdated += () => OnMemberUpdated?.Invoke(member);
     };
     OnMemberLeave += (member) => member.DispatchDisconnect();
-    var count = MemberCount;
-    for (int i = 0; i < count; i++) {
-      Members.GetOrAdd(GetMemberId(i));
-    }
   }
 
   /// <summary>
@@ -206,6 +202,13 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
 
   void INetworkSender.SendMessage(byte[] msg, int size, Reliability reliability) =>
     SendLobbyMessage(msg, size);
+
+  protected void RefreshMembers() {
+    var count = MemberCount;
+    for (int i = 0; i < count; i++) {
+      Members.GetOrAdd(GetMemberId(i));
+    }
+  }
 
   public virtual void Dispose() {
     Members.Dispose();
