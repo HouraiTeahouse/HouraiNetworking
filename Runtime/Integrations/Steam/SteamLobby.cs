@@ -26,10 +26,11 @@ public class SteamLobby : Lobby {
 
   readonly SteamLobbyManager _manager;
 
-  public SteamLobby(CSteamID id, SteamLobbyManager manager) {
+  public SteamLobby(CSteamID id, SteamLobbyManager manager) : base() {
     Assert.IsNotNull(manager);
     _id = id;
     _manager = manager;
+    RefreshMembers();
   }
 
   public override int MemberCount =>

@@ -16,18 +16,21 @@ public class IntegrationManager : MonoBehaviour {
 #pragma warning disable 0649
     [Serializable]
     abstract class IntegrationConfig {
+        public abstract string IntegrationName { get; }
         public bool Enabled;
         public abstract IIntegrationClient CreateClient();
     }
 
     [Serializable]
     class SteamConfig : IntegrationConfig {
+        public override string IntegrationName => "Steam";
         public override IIntegrationClient CreateClient() =>
             new SteamIntegrationClient();
     }
 
     [Serializable]
     class DiscordConfig : IntegrationConfig {
+        public override string IntegrationName => "Discord";
         public long ClientId;
         public override IIntegrationClient CreateClient() =>
             new DiscordIntegrationClient(ClientId);
@@ -58,9 +61,9 @@ public class IntegrationManager : MonoBehaviour {
             try {
                 var client = config.CreateClient();
                 integrations.Add(client);
-                Debug.Log($"Initialized integration: {client.GetType()}");
+                Debug.Log($"Initialized integration: {config.IntegrationName}");
             } catch (Exception e) {
-                Debug.LogException(e);
+                Debug.LogError($"Failed to load integration ({config.IntegrationName}:\n{e}");
             }
         }
         _integrations = integrations.ToArray();

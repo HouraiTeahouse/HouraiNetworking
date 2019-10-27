@@ -80,6 +80,9 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
     OnDisconnected = null;
   }
 
+  public override string ToString() =>
+    $"LobbyMember(Lobby: {Lobby.Id}, Id: {Id})";
+
 }
 
 }
