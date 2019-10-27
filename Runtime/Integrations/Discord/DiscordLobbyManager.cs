@@ -35,6 +35,12 @@ public class DiscordLobbyManager : ILobbyManager {
     var txn = _lobbyManager.GetLobbyCreateTransaction();
     txn.SetCapacity(createParams.Capacity);
     txn.SetType((DiscordApp.LobbyType)createParams.Type);
+    if (createParams.Metadata != null) {
+      foreach (var kvp in createParams.Metadata) {
+        if (kvp.Key == null || kvp.Value == null) continue;
+        txn.SetMetadata(kvp.Key, kvp.Value.ToString());
+      }
+    }
     var future = new TaskCompletionSource<Lobby>();
     _lobbyManager.CreateLobby(txn, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
         if (result != DiscordApp.Result.Ok) {
@@ -105,6 +111,16 @@ public class DiscordLobbyManager : ILobbyManager {
     }
 
     public DiscordApp.LobbySearchQuery Build() => _query;
+  }
+
+  public void Dispose() {
+    _lobbyManager.OnNetworkMessage -= OnNetworkMessage;
+    _lobbyManager.OnLobbyMessage -= OnLobbyMessage;
+    _lobbyManager.OnLobbyUpdate -= OnLobbyUpdate;
+
+    _lobbyManager.OnMemberConnect -= OnMemberConnect;
+    _lobbyManager.OnMemberDisconnect -= OnMemberDisconnect;
+    _lobbyManager.OnMemberUpdate -= OnMemberUpdate;
   }
 
   internal Task JoinLobby(DiscordLobby discordLobby) {

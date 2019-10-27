@@ -255,7 +255,7 @@ public unsafe struct Deserializer {
   /// <summary>
   /// Reads a single character from the buffer.
   /// </summary>
-  public char ReadChar() => ReadUInt16();
+  public char ReadChar() => (char)ReadUInt16();
 
   /// <summary>
   /// Reads a boolean from the buffer. This is 1 byte on the wire. It may be
