@@ -1,3 +1,4 @@
+using UnityEngine;
 using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
@@ -15,11 +16,10 @@ public class DiscordIntegrationClient : IIntegrationClient {
   }
   public ILobbyManager LobbyManager => _discordLobbyManager;
 
-  // TODO(james7132): Add log handling
-
-  public DiscordIntegrationClient(long clientId) {
+  public DiscordIntegrationClient(long clientId, DiscordApp.LogLevel logLevel = DiscordApp.LogLevel.Info) {
     var flags = (ulong)DiscordApp.CreateFlags.NoRequireDiscord;
     _discordClient = new DiscordApp.Discord(clientId, flags);
+    _discordClient.SetLogHook(logLevel, OnDiscordLog);
     _lobbyManager = _discordClient.GetLobbyManager();
     _userManager = _discordClient.GetUserManager();
     _discordLobbyManager = new DiscordLobbyManager(this);
@@ -32,6 +32,20 @@ public class DiscordIntegrationClient : IIntegrationClient {
   }
 
   public void Dispose() => _discordClient.Dispose();
+
+  void OnDiscordLog(DiscordApp.LogLevel logLevel, string message) {
+    var msg = $"Discord: {message}";
+    LogType logType;
+    switch (logLevel) {
+      case DiscordApp.LogLevel.Error:   logType = LogType.Error;   break;
+      default:
+      case DiscordApp.LogLevel.Info: 
+      case DiscordApp.LogLevel.Debug: 
+        logType = LogType.Warning; 
+        break;
+    }
+    Debug.unityLogger.Log(logType, msg);
+  }
 
 }
 
