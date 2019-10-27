@@ -9,11 +9,20 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   readonly Dictionary<AccountHandle, LobbyMember> _members;
   readonly Lobby _lobby;
 
+  /// <summary>
+  /// Gets the LobbyMember for the currently logged in user.
+  /// Will be null if the user is not connected to the lobby.
+  /// </summary>
   public LobbyMember Me => Get(new AccountHandle(_lobby.UserId));
+
+  /// <summary>
+  /// Gets the LobbyMember who currently owns the lobby.
+  /// Might be null if the user is not connected to the lobby.
+  /// </summary>
   public LobbyMember Owner => Get(new AccountHandle(_lobby.OwnerId));
 
-  public event Action<LobbyMember> OnMemberJoin;
-  public event Action<LobbyMember> OnMemberLeave;
+  internal event Action<LobbyMember> OnMemberJoin;
+  internal event Action<LobbyMember> OnMemberLeave;
 
   internal LobbyMemberMap(Lobby lobby) {
     _members = new Dictionary<AccountHandle, LobbyMember>();
@@ -41,27 +50,80 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   }
 
   internal bool Remove(AccountHandle handle) {
-    if (_members.TryGetValue(handle, out LobbyMember player)) {
+    if (_members.TryGetValue(handle, out LobbyMember member)) {
       _members.Remove(handle);
-      OnMemberLeave?.Invoke(player);
+      OnMemberLeave?.Invoke(member);
+      member.Dispose();
       return true;
     }
     return false;
   }
 
+  internal void Clear() {
+    foreach (var member in _members.Values) {
+      OnMemberLeave?.Invoke(member);
+      member.Dispose();
+    }
+    _members.Clear();
+  }
+
+  internal void Refresh() {
+    if (_members.Count > 0) Clear();
+    var count = _lobby.MemberCount;
+    for (int i = 0; i < count; i++) {
+      // Use GetOrAdd in the case the underlying implemenation accidentally
+      // returns multiple of the same member.
+      GetOrAdd(_lobby.GetMemberId(i));
+    }
+  }
+
   // Read-only accessors are public
 
+  /// <summary>
+  /// Attempts to get the member 
+  /// </summary>
+  /// <param name="handle">the user account handle.</param>
+  /// <param name="member"></param>
+  /// <returns></returns>
+  public bool TryGetValue(AccountHandle handle, out LobbyMember member) =>
+    _members.TryGetValue(handle, out member);
+
+  /// <summary>
+  /// Gets a user from the member map by their ID.
+  /// </summary>
+  /// <param name="handle">the user account handle.</param>
+  /// <returns>the LobbyMember with the ID, or null if they are not present.</returns>
   public LobbyMember Get(AccountHandle handle) {
-    if (_members.TryGetValue(handle, out LobbyMember owner)) {
+    if (TryGetValue(handle, out LobbyMember owner)) {
       return owner;
     }
     return default(LobbyMember);
   }
 
-  public bool TryGetValue(AccountHandle handle, out LobbyMember member) =>
-    _members.TryGetValue(handle, out member);
+  /// <summary>
+  /// Checks if the a user is in the lobby.
+  /// </summary>
+  /// <param name="handle">the user account handle.</param>
+  /// <returns>true if the member is in the lobby, false otherwise.</returns>
+  public bool Contains(AccountHandle handle) => Get(handle) == default(LobbyMember);
 
-  public bool Contains(AccountHandle handle) => _members.ContainsKey(handle);
+  /// <summary>
+  /// Broadcasts a network level message to all in the lobby.
+  /// 
+  /// Note: this is (usually) different form sending a lobby message
+  /// which is also broadcast to all other remote users in the lobby.
+  /// 
+  /// In general, the msg buffer does not need to live longer than the 
+  /// duration of the call. It's contents will be copied.
+  /// </summary>
+  /// <param name="msg">the buffer of the message</param>
+  /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
+  /// <param name="reliability">does the message need to be reliably sent</param>
+  public void Broadcast(byte[] msg, int size = -1, Reliability reliability = Reliability.Reliable) {
+    foreach (var member in _members.Values) {
+      member.SendMessage(msg, size, reliability: reliability);
+    }
+  }
 
   public Dictionary<AccountHandle, LobbyMember>.ValueCollection.Enumerator
     GetEnumerator() => _members.Values.GetEnumerator();
@@ -69,19 +131,10 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   IEnumerator<LobbyMember> IEnumerable<LobbyMember>.GetEnumerator() => GetEnumerator();
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-  public void Broadcast(byte[] msg, int size = -1, Reliability reliability = Reliability.Reliable) {
-    foreach (var member in _members.Values) {
-      member.SendMessage(msg, size, reliability: reliability);
-    }
-  }
-
   public void Dispose() {
+    Clear();
     OnMemberJoin = null;
     OnMemberLeave = null;
-    foreach (var member in _members.Values) {
-      member.Dispose();
-    }
-    _members.Clear();
   }
 
 }

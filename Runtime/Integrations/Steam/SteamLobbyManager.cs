@@ -7,7 +7,7 @@ using UnityEngine.Assertions;
 
 namespace HouraiTeahouse.Networking.Steam {
 
-public class SteamLobbyManager : ILobbyManager {
+internal class SteamLobbyManager : ILobbyManager {
 
   public const int kMaxMessageSize = 1200;
 
@@ -128,6 +128,7 @@ public class SteamLobbyManager : ILobbyManager {
     }
     await SteamMatchmaking.JoinLobby(id).ToTask<LobbyEnter_t>();
     _connectedLobbies.Add(id, lobby);
+    lobby.Members.Refresh();
   }
 
   internal void LeaveLobby(SteamLobby lobby) {
@@ -138,6 +139,7 @@ public class SteamLobbyManager : ILobbyManager {
     }
     _connectedLobbies.Remove(id);
     SteamMatchmaking.LeaveLobby(id);
+    lobby.Dispose();
   }
 
   // Event Handlers

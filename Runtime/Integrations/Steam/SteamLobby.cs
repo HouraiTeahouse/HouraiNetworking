@@ -6,7 +6,7 @@ using UnityEngine.Assertions;
 
 namespace HouraiTeahouse.Networking.Steam {
 
-public class SteamLobby : Lobby {
+internal class SteamLobby : Lobby {
 
   // Dummy empty message to kick off connections
   static readonly byte[] kEmptyMessage = new byte[0];
@@ -30,12 +30,12 @@ public class SteamLobby : Lobby {
     Assert.IsNotNull(manager);
     _id = id;
     _manager = manager;
-    RefreshMembers();
+    Members.Refresh();
   }
 
   public override int MemberCount =>
     SteamMatchmaking.GetNumLobbyMembers(_id);
-  protected override ulong GetMemberId(int idx) =>
+  internal override ulong GetMemberId(int idx) =>
     SteamMatchmaking.GetLobbyMemberByIndex(_id, idx).m_SteamID;
 
   public override string GetMetadata(string key) =>
@@ -58,17 +58,17 @@ public class SteamLobby : Lobby {
   public override int GetMetadataCount() =>
     SteamMatchmaking.GetLobbyDataCount(_id);
 
-  public override string GetMemberMetadata(AccountHandle handle, string key) =>
+  internal override string GetMemberMetadata(AccountHandle handle, string key) =>
     SteamMatchmaking.GetLobbyMemberData(_id, new CSteamID(handle.Id), key);
 
-  public override void SetMemberMetadata(AccountHandle handle, string key, string value) {
+  internal override void SetMemberMetadata(AccountHandle handle, string key, string value) {
     if (handle.Id != UserId) {
       throw new InvalidOperationException("Cannnot set the metadata of a Steam lobby member other than the current user.");
     }
     SteamMatchmaking.SetLobbyMemberData(_id, key, value);
   }
 
-  public override void DeleteMemberMetadata(AccountHandle handle, string key) =>
+  internal override void DeleteMemberMetadata(AccountHandle handle, string key) =>
     SetMemberMetadata(handle, key, string.Empty);
 
   public override async Task Join() {
