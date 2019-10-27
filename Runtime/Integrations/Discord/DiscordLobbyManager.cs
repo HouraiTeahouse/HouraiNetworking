@@ -1,20 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine;
+using UnityEngine.Assertions;
 using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
 
 public class DiscordLobbyManager : ILobbyManager {
 
-  readonly IDictionary<long, DiscordLobby> _lobbies;
+  readonly IDictionary<long, DiscordLobby> _connectedLobbies;
 
   internal readonly DiscordIntegrationClient _integrationClient;
   internal readonly DiscordApp.LobbyManager _lobbyManager;
   internal readonly DiscordApp.ActivityManager _activityManager;
 
   public DiscordLobbyManager(DiscordIntegrationClient integrationClient) {
-    _lobbies = new Dictionary<long, DiscordLobby>();
+    _connectedLobbies = new Dictionary<long, DiscordLobby>();
     _integrationClient = integrationClient;
     var client = _integrationClient._discordClient;
     _lobbyManager = client.GetLobbyManager();
@@ -22,6 +24,7 @@ public class DiscordLobbyManager : ILobbyManager {
 
     _lobbyManager.OnNetworkMessage += OnNetworkMessage;
     _lobbyManager.OnLobbyMessage += OnLobbyMessage;
+    _lobbyManager.OnLobbyUpdate += OnLobbyUpdate;
 
     _lobbyManager.OnMemberConnect += OnMemberConnect;
     _lobbyManager.OnMemberDisconnect += OnMemberDisconnect;
@@ -35,15 +38,12 @@ public class DiscordLobbyManager : ILobbyManager {
     var future = new TaskCompletionSource<Lobby>();
     _lobbyManager.CreateLobby(txn, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
         if (result != DiscordApp.Result.Ok) {
-          future.SetException(new Exception($"Discord Error: {result}"));
+          future.SetException(DiscordUtility.ToError(result));
           return;
         }
         var outputLobby = new DiscordLobby(this, lobby);
-        _lobbies.Add(lobby.Id, outputLobby);
-        future.SetResult(outputLobby);
-
+        _connectedLobbies.Add(lobby.Id, outputLobby);
         var secret = _lobbyManager.GetLobbyActivitySecret(lobby.Id);
-
         var activity = new DiscordApp.Activity {
           Party = {
             Id = lobby.Id.ToString(),
@@ -54,8 +54,8 @@ public class DiscordLobbyManager : ILobbyManager {
           },
           Secrets = { Join = secret }
         };
-
         _activityManager.UpdateActivity(activity, res => {});
+        future.SetResult(outputLobby);
     });
     return future.Task;
   }
@@ -66,16 +66,14 @@ public class DiscordLobbyManager : ILobbyManager {
     var future = new TaskCompletionSource<IList<Lobby>>();
     _lobbyManager.Search(queryBuilder.Build(), (result) => {
         if (result != DiscordApp.Result.Ok) {
-          future.SetException(new Exception($"Discord Error: {result}"));
+          future.SetException(DiscordUtility.ToError(result));
           return;
         }
         var count = _lobbyManager.LobbyCount();
         var results = new Lobby[count];
         for (var i = 0; i < count; i++) {
           var lobby = _lobbyManager.GetLobby(_lobbyManager.GetLobbyId(i));
-          var discordLobby = new DiscordLobby(this, lobby);
-          _lobbies.Add(lobby.Id, discordLobby);
-          results[i] = discordLobby;
+          results[i] = new DiscordLobby(this, lobby);
         }
         future.SetResult(results);
     });
@@ -109,23 +107,60 @@ public class DiscordLobbyManager : ILobbyManager {
     public DiscordApp.LobbySearchQuery Build() => _query;
   }
 
-  internal void DestroyLobby(DiscordLobby lobby) {
-    _lobbies.Remove((long)lobby.Id);
+  internal Task JoinLobby(DiscordLobby discordLobby) {
+    if (_connectedLobbies.ContainsKey((long)discordLobby.Id)) {
+      throw new InvalidOperationException("[Discord] Already connected to lobby.");
+    }
+    Assert.IsNotNull(discordLobby);
+    var future = new TaskCompletionSource<object>();
+    _lobbyManager.ConnectLobby((long)discordLobby.Id, discordLobby.Secret, 
+      (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
+        if (result != DiscordApp.Result.Ok) {
+          future.SetException(DiscordUtility.ToError(result));
+          return;
+        }
+        discordLobby._data = lobby;
+        _connectedLobbies.Add(lobby.Id, discordLobby);
+        _lobbyManager.ConnectNetwork(lobby.Id);
+        _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Reliable, true);
+        _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Unreliable, false);
+        future.SetResult(null);
+      });
+    return future.Task;
+  }
+
+  internal void LeaveLobby(DiscordLobby lobby) {
+    Assert.IsNotNull(lobby);
+    var id = (long)lobby.Id;
+    if (!_connectedLobbies.ContainsKey(id)) {
+      throw new InvalidOperationException($"Not connected to lobby: {id}");
+    }
+    _connectedLobbies.Remove(id);
+    _lobbyManager.DisconnectNetwork(id);
+    _lobbyManager.DisconnectLobby(id, DiscordUtility.LogIfError);
+    lobby.Dispose();
   }
 
   // Callbacks
 
   void OnMemberConnect(long lobbyId, long userId) {
-    DiscordLobby lobby;
-    if (_lobbies.TryGetValue(lobbyId, out lobby)) {
-      lobby.Members.Add(new AccountHandle((ulong)userId));
+    if (_connectedLobbies.TryGetValue(lobbyId, out DiscordLobby lobby)) {
+      var handle = new AccountHandle((ulong)userId);
+      if (!lobby.Members.Contains(handle)) {
+        lobby.Members.Add(handle);
+      } else {
+        Debug.LogWarning($"[Discord] Members somehow has joined multiple times: {lobbyId}, member: {userId}");
+      }
+    } else {
+      Debug.LogWarning($"[Discord] Unexpected member connect for lobby: {lobbyId}");
     }
   }
 
   void OnMemberDisconnect(long lobbyId, long userId) {
-    DiscordLobby lobby;
-    if (_lobbies.TryGetValue(lobbyId, out lobby)) {
+    if (_connectedLobbies.TryGetValue(lobbyId, out DiscordLobby lobby)) {
       lobby.Members.Remove(new AccountHandle((ulong)userId));
+    } else {
+      Debug.LogWarning($"[Discord] Unexpected member disconnect for lobby: {lobbyId}, member: {userId}");
     }
   }
 
@@ -133,25 +168,41 @@ public class DiscordLobbyManager : ILobbyManager {
     DiscordLobby lobby;
     LobbyMember member;
     var handle = new AccountHandle((ulong)userId);
-    if (!_lobbies.TryGetValue(lobbyId, out lobby)) return;
-    if (!lobby.Members.TryGetValue(handle, out member)) return;
-    member.DispatchNetworkMessage(data);
+    if (_connectedLobbies.TryGetValue(lobbyId, out lobby) &&
+        lobby.Members.TryGetValue(handle, out member)) {
+      member.DispatchNetworkMessage(data);
+    } else {
+      Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
+    }
   }
 
   void OnMemberUpdate(long lobbyId, long userId) {
     DiscordLobby lobby;
     LobbyMember member;
     var handle = new AccountHandle((ulong)userId);
-    if (!_lobbies.TryGetValue(lobbyId, out lobby)) return;
-    if (!lobby.Members.TryGetValue(handle, out member)) return;
-    member.DispatchUpdate();
+    if (_connectedLobbies.TryGetValue(lobbyId, out lobby) &&
+        lobby.Members.TryGetValue(handle, out member)) {
+      member.DispatchUpdate();
+    } else {
+      Debug.LogWarning($"[Discord] Unexpected Lobby Member Update event for lobby: {lobbyId}, member: {userId}");
+    }
+  }
+
+  void OnLobbyUpdate(long lobbyId) {
+    if (_connectedLobbies.TryGetValue(lobbyId, out DiscordLobby lobby)) {
+      lobby.DispatchUpdate();
+    } else {
+      Debug.LogWarning($"[Discord] Unexpected lobby update event for lobby: {lobbyId}");
+    }
   }
 
   void OnLobbyDelete(long lobbyId, string reason) {
-    DiscordLobby lobby;
-    if (_lobbies.TryGetValue(lobbyId, out lobby)) {
+    if (_connectedLobbies.TryGetValue(lobbyId, out DiscordLobby lobby)) {
+      _connectedLobbies.Remove(lobbyId);
+      lobby.DispatchDelete();
       lobby.Dispose();
-      _lobbies.Remove(lobbyId);
+    } else {
+      Debug.LogWarning($"[Discord] Unexpected Lobby Delete event for lobby: {lobbyId}");
     }
   }
 
@@ -159,20 +210,12 @@ public class DiscordLobbyManager : ILobbyManager {
     DiscordLobby lobby;
     LobbyMember member;
     var handle = new AccountHandle((ulong)userId);
-    if (!_lobbies.TryGetValue(lobbyId, out lobby)) return;
-    if (!lobby.Members.TryGetValue(handle, out member)) return;
-    lobby.DispatchLobbyMessage(member, data, (uint)data.Length);
-  }
-
-  DiscordLobby GetLobby(DiscordApp.Lobby data) {
-    DiscordLobby lobby;
-    if (!_lobbies.TryGetValue(data.Id, out lobby)) {
-      lobby = new DiscordLobby(this, data);
-      _lobbies.Add(data.Id, lobby);
+    if (_connectedLobbies.TryGetValue(lobbyId, out lobby) &&
+        lobby.Members.TryGetValue(handle, out member)) {
+      lobby.DispatchLobbyMessage(member, data, (uint)data.Length);
     } else {
-      lobby.Update(data);
+      Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
     }
-    return lobby;
   }
 
 }

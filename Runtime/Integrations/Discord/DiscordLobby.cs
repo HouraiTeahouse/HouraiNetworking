@@ -9,6 +9,8 @@ public class DiscordLobby : Lobby {
 
   readonly DiscordIntegrationClient _integrationClient;
   readonly DiscordApp.LobbyManager _lobbyManager;
+  readonly DiscordLobbyManager _manager;
+
   public override ulong Id => (ulong)_data.Id;
   public override LobbyType Type => _data.Type == DiscordApp.LobbyType.Public ? LobbyType.Public : LobbyType.Private;
   public override uint Capacity => _data.Capacity;
@@ -16,10 +18,12 @@ public class DiscordLobby : Lobby {
   public override ulong OwnerId => (ulong)_data.OwnerId;
   public override bool IsLocked => _data.Locked;
 
-  DiscordApp.Lobby _data;
+  internal string Secret => _data.Secret;
+  internal DiscordApp.Lobby _data;
 
   public DiscordLobby(DiscordLobbyManager manager, DiscordApp.Lobby lobby) : base() {
     _data = lobby;
+    _manager = manager;
     _lobbyManager = manager._lobbyManager;
     _integrationClient = manager._integrationClient;
   }
@@ -80,26 +84,9 @@ public class DiscordLobby : Lobby {
 
   public override int GetMetadataCount() => _lobbyManager.LobbyMetadataCount(_data.Id);
 
-  public override Task Join() {
-    var future = new TaskCompletionSource<bool>();
-    // TODO(james7132): Make sure this works
-    _lobbyManager.ConnectLobby(_data.Id, _data.Secret, (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
-      if (result != DiscordApp.Result.Ok) {
-        // TODO(james7132): Implement
-        return;
-      }
-      _data = lobby;
-      _lobbyManager.ConnectNetwork(lobby.Id);
-      _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Reliable, true);
-      _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Unreliable, false);
-    });
-    return future.Task;
-  }
+  public override Task Join() => _manager.JoinLobby(this);
 
-  public override void Leave() {
-    _lobbyManager.DisconnectNetwork(_data.Id);
-    _lobbyManager.DisconnectLobby(_data.Id, DiscordUtility.LogIfError);
-  }
+  public override void Leave() => _manager.LeaveLobby(this);
 
   public override void Delete() {
     _lobbyManager.DeleteLobby(_data.Id, DiscordUtility.LogIfError);
