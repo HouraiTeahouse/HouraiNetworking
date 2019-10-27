@@ -58,11 +58,18 @@ public class SteamLobbyManager : ILobbyManager {
     var size = createParams.Capacity;
     var lobbyEnter = SteamUtility.WaitFor<LobbyEnter_t>();
     var result = await SteamMatchmaking.CreateLobby(type, (int)size).ToTask<LobbyCreated_t>();
-    if (SteamUtility.IsError(result.m_eResult)) {
-      throw SteamUtility.CreateError(result.m_eResult);
-    }
+    SteamUtility.ThrowIfError(result.m_eResult);
     await lobbyEnter;
-    return AddOrUpdateLobby(new CSteamID(lobbyEnter.Result.m_ulSteamIDLobby));
+    var lobbyId = new CSteamID(lobbyEnter.Result.m_ulSteamIDLobby);
+    var lobby = new SteamLobby(lobbyId, this);
+    if (createParams.Metadata != null) {
+      foreach (var kvp in createParams.Metadata) {
+        if (kvp.Key == null || kvp.Value == null) continue;
+        SteamMatchmaking.SetLobbyData(lobbyId, kvp.Key, kvp.Value.ToString());
+      }
+    }
+    _connectedLobbies.Add(lobbyId, lobby);
+    return lobby;
   }
 
   public async Task<IList<Lobby>> SearchLobbies(Action<ILobbySearchBuilder> builder = null) {
@@ -104,6 +111,13 @@ public class SteamLobbyManager : ILobbyManager {
       SteamMatchmaking.AddRequestLobbyListResultCountFilter(limit);
       return this;
     }
+  }
+
+  public void Dispose() {
+    callbackP2PSesssionRequest.Dispose();
+    callbackP2PConnectFail.Dispose();
+    callbackLobbyChatUpdate.Dispose();
+    callbackLobbyDataUpdate.Dispose();
   }
 
   internal async Task JoinLobby(SteamLobby lobby) {
@@ -204,15 +218,6 @@ public class SteamLobbyManager : ILobbyManager {
     } else {
       Debug.LogWarning($"[Steam] Unexpected lobby update event for lobby: {id}");
     }
-  }
-
-  SteamLobby AddOrUpdateLobby(CSteamID id) {
-    SteamLobby lobby;
-    if (!_connectedLobbies.TryGetValue(id, out lobby)) {
-      lobby = new SteamLobby(id, this);
-      _connectedLobbies.Add(id, lobby);
-    }
-    return lobby;
   }
 
 }

@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using DiscordApp = Discord;
+using UnityEngine;
 using UnityEngine.Assertions;
+using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
 
@@ -14,12 +15,23 @@ public class DiscordLobby : Lobby {
 
   public override ulong Id => (ulong)_data.Id;
   public override LobbyType Type => _data.Type == DiscordApp.LobbyType.Public ? LobbyType.Public : LobbyType.Private;
-  public override uint Capacity => _data.Capacity;
+
+  public override int Capacity {
+    get => (int)_data.Capacity;
+    set {
+      GetUpdateTransaction().SetCapacity((uint)value);
+      _data.Capacity = (uint)value;
+    }
+  }
+
   public override ulong UserId => _integrationClient.ActiveUser.Id;
   public override ulong OwnerId => (ulong)_data.OwnerId;
   public override bool IsLocked {
     get => _data.Locked;
-    set => GetUpdateTransaction().SetLocked(value);
+    set {
+      GetUpdateTransaction().SetLocked(value);
+      _data.Locked = value;
+    }
   }
 
   internal string Secret => _data.Secret;
@@ -90,15 +102,16 @@ public class DiscordLobby : Lobby {
     if (_updateTxn != null) {
       _lobbyManager.UpdateLobby(_data.Id, _updateTxn.Value, (result) => {
         if (result == DiscordApp.Result.Ok) return;
-        Debug.LogError($"[Discord] Error while updating lobby")
+        Debug.LogError($"[Discord] Error while updating lobby ({_data.Id}): {result}");
       });
       _updateTxn = null;
     }
     if (_memberUpdateTxns?.Count > 0) {
       foreach (var kvp in _memberUpdateTxns) {
-        _lobbyManager.UpdateMember(_data.Id, kvp.Key, kvp.Value, (result) => {
+        var userId = kvp.Key;
+        _lobbyManager.UpdateMember(_data.Id, userId, kvp.Value, (result) => {
           if (result == DiscordApp.Result.Ok) return;
-          // TODO(james7132): Implement
+          Debug.LogError($"[Discord] Error while updating lobby ({_data.Id}), member ({userId}): {result}");
         });
       }
       _memberUpdateTxns.Clear();

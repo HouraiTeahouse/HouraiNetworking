@@ -12,23 +12,19 @@ public static class SteamUtility {
   /// Does nothing if there is no error.
   /// </summary>
   /// <param name="result">the error code of the error.</param>
-  public static void HandleError(EResult result) {
+  public static void LogIfError(EResult result) {
     if (result == EResult.k_EResultOK) return;
-    Debug.LogError($"Steam Networking Error: {result}");
-  }
-
-  public static bool IsError(EResult result) {
-    return result != EResult.k_EResultOK;
+    Debug.LogError($"Steam Error: {result}");
   }
 
   /// <summary>
-  /// Creates an exception out of a UNET NetworkError.
+  /// Creates an exception out of a Steam Result.
   /// </summary>
   /// <param name="result">the error code of the error.</param>
   /// <returns>an exception representing the error, null if no error.</returns>
-  public static Exception CreateError(EResult result) {
+  public static Exception ThrowIfError(EResult result) {
     if (result == EResult.k_EResultOK) return null;
-    return new Exception($"Steam Networking Error: {result}");
+    throw new Exception($"Steam Error: {result}");
   }
 
   public static async Task<T> ToTask<T>(this SteamAPICall_t apiCall) {

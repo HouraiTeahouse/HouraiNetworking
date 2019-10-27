@@ -48,11 +48,6 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// not currently connected to the lobby.
   /// </summary>
   public abstract ulong UserId { get; }
-  public abstract uint Capacity { get; }
-  public virtual bool IsLocked {
-    get => false;
-    set => throw new NotSupportedException();
-  }
 
   /// <summary>
   /// Gets the number of members currently in the lobby.
@@ -62,7 +57,7 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// <summary>
   /// Gets the maximum number of members lobby can suppoprt.
   /// </summary>
-  public abstract int Capacity { get; }
+  public abstract int Capacity { get; set; }
 
   /// <summary>
   /// Gets or sets whether the lobby can accept new joins.
