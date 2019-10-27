@@ -123,10 +123,11 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   public event Action<LobbyMember, byte[], uint> OnNetworkMessage;
 
   /// <summary>
-  ///
+  /// Event fired each time a member has been updated.
+  /// </summary>
   public event Action<LobbyMember> OnMemberUpdated;
 
-  protected abstract ulong GetMemberId(int idx);
+  internal abstract ulong GetMemberId(int idx);
 
   /// <summary>
   /// A read-only map of members currently in the lobby.
@@ -135,14 +136,7 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
 
   protected Lobby() {
     Members = new LobbyMemberMap(this);
-    OnMemberJoin += (member) => {
-      member.OnNetworkMessage += (buf, size) => {
-        OnNetworkMessage?.Invoke(member, buf, size);
-      };
-
-      member.OnUpdated += () => OnMemberUpdated?.Invoke(member);
-    };
-    OnMemberLeave += (member) => member.DispatchDisconnect();
+    SetupListeners();
   }
 
   /// <summary>
@@ -169,27 +163,66 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// </summary>
   public abstract void Delete();
 
+  /// <summary>
+  /// Gets the lobby metadata value.
+  /// </summary>
+  /// <param name="key">the metadata key</param>
+  /// <returns>the metadata value, may return null or empty strings if not set</returns>
   public abstract string GetMetadata(string key);
+
+  /// <summary>
+  /// Sets the metadata for the lobby.
+  /// Generally requires being the owner of the lobby.
+  /// </summary>
+  /// <param name="key">the key of the metadata</param>
+  /// <param name="value">the value of the metadata</param>
   public abstract void SetMetadata(string key, string value);
+
+  /// <summary>
+  /// Deletes a metadata entry from the lobby.
+  /// </summary>
+  /// <param name="key">the key of the metadata to delete from</param>
   public abstract void DeleteMetadata(string key);
 
+  /// <summary>
+  /// Gets the number of metadata entries on the lobby.
+  /// This usually precedes calling GetKeyByIndex.
+  /// </summary>
+  /// <returns>the number of metadata elements in the lobby.</returns>
   public abstract int GetMetadataCount();
+
+  /// <summary>
+  /// Gets a metadata key by it's index.
+  /// 
+  /// GetMetadataCount must be called first.
+  /// </summary>
+  /// <param name="idx">the index to fetch the key for</param>
+  /// <returns>the key for the index, or null/empty if out of range.</returns>
   public abstract string GetKeyByIndex(int idx);
 
-  public virtual string GetMemberMetadata(AccountHandle handle, string key) =>
+  internal virtual string GetMemberMetadata(AccountHandle handle, string key) =>
     throw new NotSupportedException();
-  public virtual void SetMemberMetadata(AccountHandle handle, string key, string value) =>
+  internal virtual void SetMemberMetadata(AccountHandle handle, string key, string value) =>
     throw new NotSupportedException();
-  public virtual void DeleteMemberMetadata(AccountHandle handle, string key) =>
-    throw new NotSupportedException();
-
-  public virtual int GetMemberMetadataCount(AccountHandle handle) =>
-    throw new NotSupportedException();
-  public virtual string GetMemberMetadataKey(AccountHandle handle, int idx) =>
+  internal virtual void DeleteMemberMetadata(AccountHandle handle, string key) =>
     throw new NotSupportedException();
 
+  internal virtual int GetMemberMetadataCount(AccountHandle handle) =>
+    throw new NotSupportedException();
+  internal virtual string GetMemberMetadataKey(AccountHandle handle, int idx) =>
+    throw new NotSupportedException();
+
+  /// <summary>
+  /// Sends a lobby level message to all other users in the lobby.
+  /// </summary>
+  /// <param name="msg">the buffer of the sent message</param>
+  /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
   public abstract void SendLobbyMessage(byte[] msg, int size = -1);
 
+  /// <summary>
+  /// Flushes metadata changes to the network. If not called, changes 
+  /// may be delayed. Manual flushing may not be available for all backends.
+  /// </summary>
   public virtual void FlushChanges() {}
 
   internal abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, int size = -1,
@@ -203,19 +236,23 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   void INetworkSender.SendMessage(byte[] msg, int size, Reliability reliability) =>
     SendLobbyMessage(msg, size);
 
-  protected void RefreshMembers() {
-    var count = MemberCount;
-    for (int i = 0; i < count; i++) {
-      Members.GetOrAdd(GetMemberId(i));
-    }
-  }
-
   public virtual void Dispose() {
     Members.Dispose();
     OnUpdated = null;
     OnDeleted = null;
     OnNetworkMessage = null;
     OnMemberUpdated = null;
+    SetupListeners();
+  }
+
+  void SetupListeners() {
+    OnMemberJoin += (member) => {
+      member.OnNetworkMessage += (buf, size) => {
+        OnNetworkMessage?.Invoke(member, buf, size);
+      };
+      member.OnUpdated += () => OnMemberUpdated?.Invoke(member);
+    };
+    OnMemberLeave += (member) => member.DispatchDisconnect();
   }
 
 }

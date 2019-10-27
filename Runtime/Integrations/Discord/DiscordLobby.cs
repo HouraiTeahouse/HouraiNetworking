@@ -7,7 +7,7 @@ using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
 
-public class DiscordLobby : Lobby {
+internal class DiscordLobby : Lobby {
 
   readonly DiscordIntegrationClient _integrationClient;
   readonly DiscordApp.LobbyManager _lobbyManager;
@@ -49,7 +49,7 @@ public class DiscordLobby : Lobby {
 
     _updateTxn = null;
     _memberUpdateTxns = null;
-    RefreshMembers();
+    Members.Refresh();
   }
 
   internal void Update(DiscordApp.Lobby data) {
@@ -58,7 +58,7 @@ public class DiscordLobby : Lobby {
   }
 
   public override int MemberCount => _lobbyManager.MemberCount(_data.Id);
-  protected override ulong GetMemberId(int idx) =>
+  internal override ulong GetMemberId(int idx) =>
     (ulong)_lobbyManager.GetMemberUserId(_data.Id, idx);
 
   public override string GetMetadata(string key) =>
@@ -73,13 +73,13 @@ public class DiscordLobby : Lobby {
   public override void DeleteMetadata(string key) => 
     GetUpdateTransaction().DeleteMetadata(key);
 
-  public override string GetMemberMetadata(AccountHandle handle, string key) =>
+  internal override string GetMemberMetadata(AccountHandle handle, string key) =>
     _lobbyManager.GetMemberMetadataValue(_data.Id, (long)handle.Id, key);
 
-  public override void SetMemberMetadata(AccountHandle handle, string key, string value) =>
+  internal override void SetMemberMetadata(AccountHandle handle, string key, string value) =>
     GetMemberTransaction((long)handle.Id).SetMetadata(key, value);
   
-  public override void DeleteMemberMetadata(AccountHandle handle, string key) =>
+  internal override void DeleteMemberMetadata(AccountHandle handle, string key) =>
     GetMemberTransaction((long)handle.Id).DeleteMetadata(key);
 
   public override int GetMetadataCount() => _lobbyManager.LobbyMetadataCount(_data.Id);

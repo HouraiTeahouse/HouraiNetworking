@@ -7,7 +7,7 @@ using DiscordApp = Discord;
 
 namespace HouraiTeahouse.Networking.Discord {
 
-public class DiscordLobbyManager : ILobbyManager {
+internal class DiscordLobbyManager : ILobbyManager {
 
   readonly Dictionary<long, DiscordLobby> _connectedLobbies;
 
@@ -140,6 +140,7 @@ public class DiscordLobbyManager : ILobbyManager {
         _lobbyManager.ConnectNetwork(lobby.Id);
         _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Reliable, true);
         _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Unreliable, false);
+        discordLobby.Members.Refresh();
         future.SetResult(null);
       });
     return future.Task;
