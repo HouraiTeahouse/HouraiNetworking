@@ -2,6 +2,7 @@ using Steamworks;
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace HouraiTeahouse.Networking.Steam {
 
@@ -21,7 +22,13 @@ public class SteamLobby : Lobby {
   // Steam lobbies cannot be locked
   public override bool IsLocked => false;
 
-  public SteamLobby(CSteamID id) => _id = id;
+  readonly SteamLobbyManager _manager;
+
+  public SteamLobby(CSteamID id, SteamLobbyManager manager) {
+    Assert.IsNotNull(manager);
+    _id = id;
+    _manager = manager;
+  }
 
   public override int MemberCount =>
     SteamMatchmaking.GetNumLobbyMembers(_id);

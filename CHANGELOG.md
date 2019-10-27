@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.2] - 2019-10-xx
  * Renamed LobbyBase -> Lobby
  * Fix: Added member metadata function implementations for both Discord and Steam
+ * Fix: Properly implement event triggers for some events in both Discord and Steam
+ * Properly implement the connected lobby logic.
  * Added more events to Lobby and LobbyMember.
  * Added a high performance CRC32 implemenation for ease of use.
  * Added shortcut IntegrationManager to simplify setup.
