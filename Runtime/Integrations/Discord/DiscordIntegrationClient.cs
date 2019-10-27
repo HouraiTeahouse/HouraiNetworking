@@ -8,10 +8,12 @@ public class DiscordIntegrationClient : IIntegrationClient {
   readonly DiscordApp.LobbyManager _lobbyManager;
   readonly DiscordApp.UserManager _userManager;
 
+  readonly DiscordLobbyManager _discordLobbyManager;
+
   public AccountHandle ActiveUser {
     get => new AccountHandle((ulong)_userManager.GetCurrentUser().Id);
   }
-  public ILobbyManager LobbyManager { get; }
+  public ILobbyManager LobbyManager => _discordLobbyManager;
 
   // TODO(james7132): Add log handling
 
@@ -20,10 +22,11 @@ public class DiscordIntegrationClient : IIntegrationClient {
     _discordClient = new DiscordApp.Discord(clientId, flags);
     _lobbyManager = _discordClient.GetLobbyManager();
     _userManager = _discordClient.GetUserManager();
-    LobbyManager = new DiscordLobbyManager(this);
+    _discordLobbyManager = new DiscordLobbyManager(this);
   }
 
   public void Update() {
+    _discordLobbyManager.Update();
     _lobbyManager.FlushNetwork();
     _discordClient.RunCallbacks();
   }
