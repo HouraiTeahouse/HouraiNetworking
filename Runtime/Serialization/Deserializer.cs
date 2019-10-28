@@ -415,6 +415,16 @@ public unsafe struct Deserializer {
       return m;
   }
 
+  /// <summary>
+  /// Reads a struct by directly copying it off of the buffer.
+  /// </summary>
+  public void ReadStruct<T>(ref T val) where T : struct {
+    var size = UnsafeUtility.SizeOf<T>();
+    CheckRemainingSize(size);
+    UnsafeUtility.CopyPtrToStructure(_current, out val);
+    _current += size;
+  }
+
   public override string ToString() => $"Deserializer sz:{Size} pos:{Position}";
 
   /// <summary>
