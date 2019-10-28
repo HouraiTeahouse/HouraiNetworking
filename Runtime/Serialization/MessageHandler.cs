@@ -74,7 +74,7 @@ public sealed class MessageHandlers : IDisposable {
     var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
     var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
     Serialize<T>(msg, ref serializer);
-    sender.SendMessage(serializer.ToArray(), serializer.Position, reliability);
+    sender.SendMessage(serializer.ToFixedBuffer(), reliability);
   }
 
   public unsafe void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
@@ -84,8 +84,7 @@ public sealed class MessageHandlers : IDisposable {
     var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
     Serialize<T>(msg, ref serializer);
     foreach (var sender in senders) {
-      sender.SendMessage(serializer.ToArray(), serializer.Position,
-                        reliability);
+      sender.SendMessage(serializer.ToFixedBuffer(), reliability);
     }
   }
 
@@ -109,13 +108,11 @@ public sealed class MessageHandlers : IDisposable {
 
   public unsafe void Listen(INetworkReciever reciever) {
     if (_recievers.ContainsKey(reciever)) return;
-    NetworkMessageHandler callback = (msg, size) => {
-      if (size <= 0) return;
-      fixed (byte* msgPtr = msg) {
-        var deserializer = Deserializer.Create(msgPtr, size);
-        byte header = deserializer.ReadByte();
-        _handlers[header]?.Invoke(new NetworkMessage(reciever, deserializer));
-      }
+    NetworkMessageHandler callback = (msg) => {
+      if (msg.Size <= 0) return;
+      var deserializer = Deserializer.Create(msg);
+      byte header = deserializer.ReadByte();
+      _handlers[header]?.Invoke(new NetworkMessage(reciever, deserializer));
     };
     reciever.OnNetworkMessage += callback;
     _recievers[reciever] = callback;

@@ -113,29 +113,38 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
   /// <param name="msg">the buffer of the message</param>
   /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
   /// <param name="reliability">does the message need to be reliably sent</param>
-  public void SendMessage(byte[] msg, int size = -1,
-                          Reliability reliability = Reliability.Reliable) {
-    size = size < 0 ? msg.Length : size;
-    if (MessageProcessor != null) {
-      MessageProcessor.Apply(ref msg, ref size);
+  public unsafe void SendMessage(FixedBuffer msg, Reliability reliability = Reliability.Reliable) {
+    if (MessageProcessor == null) {
+      Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
+    } else {
+      var buffer = msg.ToArray();
+      var size = (int)msg.Size;
+      MessageProcessor.Apply(ref buffer, ref size);
+      fixed (byte* ptr = buffer) {
+        msg = new FixedBuffer(ptr, size);
+        Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
+      }
     }
 
     _stats.PacketsSent++;
-    _stats.BytesSent += (ulong)size;
-
-    Lobby.SendNetworkMessage(Id, msg, size, reliability: reliability);
+    _stats.BytesSent += (ulong)msg.Size;
   }
 
-  internal void DispatchNetworkMessage(byte[] msg, int size = -1) {
-    size = size < 0 ? msg.Length : size;
-
+  internal unsafe void DispatchNetworkMessage(FixedBuffer msg) {
     _stats.PacketsRecieved++;
-    _stats.BytesRecieved += (ulong)size;
+    _stats.BytesRecieved += (ulong)msg.Size;
 
-    if (MessageProcessor != null) {
-      MessageProcessor.Unapply(ref msg, ref size);
+    if (OnNetworkMessage == null) return;
+    if (MessageProcessor == null) {
+      OnNetworkMessage(msg);
+    } else {
+      var buffer = msg.ToArray();
+      var size = (int)msg.Size;
+      MessageProcessor.Unapply(ref buffer, ref size);
+      fixed (byte* ptr = buffer) {
+        OnNetworkMessage(new FixedBuffer(ptr, size));
+      }
     }
-    OnNetworkMessage?.Invoke(msg, (uint)size);
   }
 
   internal void DispatchUpdate() => OnUpdated?.Invoke();

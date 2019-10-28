@@ -3,12 +3,11 @@ using System.Collections.Generic;
 
 namespace HouraiTeahouse.Networking {
 
-public delegate void NetworkMessageHandler(byte[] msg, uint size);
+public delegate void NetworkMessageHandler(FixedBuffer buffer);
 
 public interface INetworkSender {
 
-    void SendMessage(byte[] msg, int size = -1,
-                     Reliability reliability = Reliability.Reliable);
+    void SendMessage(FixedBuffer buffer, Reliability reliability = Reliability.Reliable);
 
 }
 
@@ -28,7 +27,7 @@ public static unsafe class INetworkConnectionExtensions {
     var writer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
     writer.Write(header);
     message.Serialize(ref writer);
-    connection.SendMessage(writer.ToArray(), writer.Position, reliablity);
+    connection.SendMessage(writer.ToFixedBuffer(), reliablity);
     (message as IDisposable)?.Dispose();
   }
 
@@ -41,10 +40,8 @@ public static unsafe class INetworkConnectionExtensions {
     var writer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
     writer.Write(header);
     message.Serialize(ref writer);
-    var bufferSize = writer.Position;
-    var buf = writer.ToArray();
     foreach (var connection in connections) {
-      connection.SendMessage(buf, writer.Position, reliablity);
+      connection.SendMessage(writer.ToFixedBuffer(), reliablity);
     }
     (message as IDisposable)?.Dispose();
   }

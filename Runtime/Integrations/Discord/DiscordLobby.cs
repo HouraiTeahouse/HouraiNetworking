@@ -91,13 +91,8 @@ internal class DiscordLobby : Lobby {
   public override void Delete() =>
     _lobbyManager.DeleteLobby(_data.Id, DiscordUtility.LogIfError);
 
-  public override void SendLobbyMessage(byte[] msg, int size = -1) {
-    if (size >= 0 && size != msg.Length) {
-      var temp = new byte[size];
-      Buffer.BlockCopy(msg, 0, temp, 0, size);
-      msg = temp;
-    }
-    _lobbyManager.SendLobbyMessage(_data.Id, msg, DiscordUtility.LogIfError);
+  public override void SendLobbyMessage(FixedBuffer msg) {
+    _lobbyManager.SendLobbyMessage(_data.Id, msg.ToExactArray(), DiscordUtility.LogIfError);
   }
 
   public override void FlushChanges() {
@@ -120,16 +115,9 @@ internal class DiscordLobby : Lobby {
     }
   }
 
-  internal override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
-                                          Reliability reliability = Reliability.Reliable) {
-    Assert.IsTrue(size <= msg.Length);
-    if (size >= 0 && size != msg.Length) {
-      var temp = new byte[size];
-      Buffer.BlockCopy(msg, 0, temp, 0, size);
-      ArrayPool<byte>.Shared.Return(msg);
-      msg = temp;
-    }
-    _lobbyManager.SendNetworkMessage(_data.Id, (long)target.Id, (byte)reliability, msg);
+  internal override void SendNetworkMessage(AccountHandle target, FixedBuffer buffer,
+                                            Reliability reliability = Reliability.Reliable) {
+    _lobbyManager.SendNetworkMessage(_data.Id, (long)target.Id, (byte)reliability, buffer.ToExactArray());
   }
 
   DiscordApp.LobbyTransaction GetUpdateTransaction() {

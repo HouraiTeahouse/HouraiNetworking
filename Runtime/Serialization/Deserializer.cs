@@ -66,6 +66,17 @@ public unsafe struct Deserializer {
   }
 
   /// <summary>
+  /// Creates a Deserializer from a provided FixedBuffer.
+  /// </summary>
+  public static Deserializer Create(FixedBuffer buf) {
+    return new Deserializer {
+      _start = buf.Start,
+      _current = buf.Start,
+      _end = buf.End,
+    };
+  }
+
+  /// <summary>
   /// Deserializes an object directly from a base64 string.
   ///
   /// This function allocates GC

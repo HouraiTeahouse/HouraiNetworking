@@ -187,24 +187,20 @@ internal class DiscordLobbyManager : ILobbyManager {
     }
   }
 
-  void OnNetworkMessage(long lobbyId, long userId, byte _, byte[] data) {
-    DiscordLobby lobby;
-    LobbyMember member;
-    var handle = new AccountHandle((ulong)userId);
-    if (_connectedLobbies.TryGetValue(lobbyId, out lobby) &&
-        lobby.Members.TryGetValue(handle, out member)) {
-      member.DispatchNetworkMessage(data);
+  unsafe void OnNetworkMessage(long lobbyId, long userId, byte _, byte[] data) {
+    LobbyMember member = GetLobbyMember(lobbyId, userId);
+    if (member != null) {
+      fixed (byte* ptr = data) {
+        member.DispatchNetworkMessage(new FixedBuffer(ptr, data.Length));
+      }
     } else {
       Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
     }
   }
 
   void OnMemberUpdate(long lobbyId, long userId) {
-    DiscordLobby lobby;
-    LobbyMember member;
-    var handle = new AccountHandle((ulong)userId);
-    if (_connectedLobbies.TryGetValue(lobbyId, out lobby) &&
-        lobby.Members.TryGetValue(handle, out member)) {
+    LobbyMember member = GetLobbyMember(lobbyId, userId);
+    if (member != null) {
       member.DispatchUpdate();
     } else {
       Debug.LogWarning($"[Discord] Unexpected Lobby Member Update event for lobby: {lobbyId}, member: {userId}");
@@ -229,16 +225,24 @@ internal class DiscordLobbyManager : ILobbyManager {
     }
   }
 
-  void OnLobbyMessage(long lobbyId, long userId, byte[] data) {
-    DiscordLobby lobby;
-    LobbyMember member;
-    var handle = new AccountHandle((ulong)userId);
-    if (_connectedLobbies.TryGetValue(lobbyId, out lobby) &&
-        lobby.Members.TryGetValue(handle, out member)) {
-      lobby.DispatchLobbyMessage(member, data, (uint)data.Length);
+  unsafe void OnLobbyMessage(long lobbyId, long userId, byte[] data) {
+    LobbyMember member = GetLobbyMember(lobbyId, userId);
+    if (member != null) {
+      fixed (byte* ptr = data) {
+        member.Lobby.DispatchLobbyMessage(member, new FixedBuffer(ptr, data.Length));
+      }
     } else {
       Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
     }
+  }
+
+  LobbyMember GetLobbyMember(long lobbyId, long userId) {
+    var handle = new AccountHandle((ulong)userId);
+    if (_connectedLobbies.TryGetValue(lobbyId, out DiscordLobby lobby) &&
+        lobby.Members.TryGetValue(handle, out LobbyMember member)) {
+      return member;
+    }
+    return default(LobbyMember);
   }
 
 }

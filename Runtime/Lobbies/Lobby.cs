@@ -22,6 +22,8 @@ public interface IMetadataContainer {
 /// </summary>
 public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
 
+  public delegate void LobbyMessageHandler(LobbyMember origin, FixedBuffer msg);
+
   /// <summary>
   /// Getas an identifier for the lobby that is unique within the underlying
   /// integration.
@@ -115,12 +117,12 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// <summary>
   /// Event fired upon recieving a lobby-level message from another user.
   /// </summary>
-  public event Action<LobbyMember, byte[], uint> OnLobbyMessage;
+  public event LobbyMessageHandler OnLobbyMessage;
 
   /// <summary>
   /// Event fired upon recieving a directed message from a given user.
   /// </summary>
-  public event Action<LobbyMember, byte[], uint> OnNetworkMessage;
+  public event LobbyMessageHandler OnNetworkMessage;
 
   /// <summary>
   /// Event fired each time a member has been updated.
@@ -217,7 +219,7 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// </summary>
   /// <param name="msg">the buffer of the sent message</param>
   /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
-  public abstract void SendLobbyMessage(byte[] msg, int size = -1);
+  public abstract void SendLobbyMessage(FixedBuffer msg);
 
   /// <summary>
   /// Flushes metadata changes to the network. If not called, changes 
@@ -225,16 +227,16 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// </summary>
   public virtual void FlushChanges() {}
 
-  internal abstract void SendNetworkMessage(AccountHandle handle, byte[] msg, int size = -1,
-                                          Reliability reliability = Reliability.Reliable);
+  internal abstract void SendNetworkMessage(AccountHandle handle, FixedBuffer buffer,
+                                            Reliability reliability = Reliability.Reliable);
 
   internal void DispatchDelete() => OnDeleted?.Invoke();
-  internal void DispatchLobbyMessage(LobbyMember handle, byte[] msg, uint size) =>
-    OnLobbyMessage?.Invoke(handle, msg, size);
+  internal void DispatchLobbyMessage(LobbyMember handle, FixedBuffer msg) =>
+    OnLobbyMessage?.Invoke(handle, msg);
   internal void DispatchUpdate() => OnUpdated?.Invoke();
 
-  void INetworkSender.SendMessage(byte[] msg, int size, Reliability reliability) =>
-    SendLobbyMessage(msg, size);
+  void INetworkSender.SendMessage(FixedBuffer msg, Reliability reliability) =>
+    SendLobbyMessage(msg);
 
   public virtual void Dispose() {
     Members.Dispose();
@@ -247,8 +249,8 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
 
   void SetupListeners() {
     OnMemberJoin += (member) => {
-      member.OnNetworkMessage += (buf, size) => {
-        OnNetworkMessage?.Invoke(member, buf, size);
+      member.OnNetworkMessage += (msg) => {
+        OnNetworkMessage?.Invoke(member, msg);
       };
       member.OnUpdated += () => OnMemberUpdated?.Invoke(member);
     };

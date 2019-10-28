@@ -31,19 +31,22 @@ internal class SteamLobbyManager : ILobbyManager {
     callbackLobbyDataUpdate = Callback<LobbyDataUpdate_t>.Create(OnLobbyDataUpdate);
   }
 
-  public void Update() {
-    while (SteamNetworking.ReadP2PPacket(_readBuffer, kMaxMessageSize, 
-                                         out uint dataSize, out CSteamID userId)) {
-      var handle = new AccountHandle(userId.m_SteamID);
-      var handled = false;
-      foreach (var lobby in _connectedLobbies.Values) {
-        if (lobby.Members.TryGetValue(handle, out LobbyMember member)) {
-            member.DispatchNetworkMessage(_readBuffer, (int)dataSize);
+  public unsafe void Update() {
+    fixed (byte* ptr = _readBuffer) {
+      while (SteamNetworking.ReadP2PPacket(_readBuffer, kMaxMessageSize, 
+                                          out uint dataSize, out CSteamID userId)) {
+        var handle = new AccountHandle(userId.m_SteamID);
+        var handled = false;
+        foreach (var lobby in _connectedLobbies.Values) {
+          if (lobby.Members.TryGetValue(handle, out LobbyMember member)) {
+            var buffer = new FixedBuffer(ptr, dataSize);
+            member.DispatchNetworkMessage(buffer);
             handled = true;
+          }
         }
-      }
-      if (!handled) {
-        Debug.LogWarning($"[Steam] Unexpected network message from user: {userId}");
+        if (!handled) {
+          Debug.LogWarning($"[Steam] Unexpected network message from user: {userId}");
+        }
       }
     }
   }
