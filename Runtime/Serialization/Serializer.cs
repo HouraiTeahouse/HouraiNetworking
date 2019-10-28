@@ -22,26 +22,11 @@ public unsafe struct Serializer {
     };
   }
 
-  public void CopyTo(byte* buffer) =>
-    UnsafeUtility.MemCpy(buffer, _start, Position);
-
-  public void CopyTo(byte[] array, int offset = 0) {
-    if (offset < 0 || offset + Position >= array.Length) {
-      throw new IndexOutOfRangeException();
-    }
-    fixed (byte* arrayPtr = array) {
-      CopyTo(arrayPtr + offset);
-    }
-  }
-
-  public byte[] ToArray() {
-    var array = ArrayPool<byte>.Shared.Rent(Position);
-    CopyTo(array);
-    return array;
-  }
+  public FixedBuffer ToFixedBuffer() =>
+    new FixedBuffer(_start, _current);
 
   public string ToBase64String() {
-    var array =  ToArray();
+    var array =  ToFixedBuffer().ToArray();
     var str = Convert.ToBase64String(array, 0, Position);
     ArrayPool<byte>.Shared.Return(array);
     return str;

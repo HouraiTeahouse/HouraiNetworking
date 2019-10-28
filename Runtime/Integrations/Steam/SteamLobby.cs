@@ -74,7 +74,8 @@ internal class SteamLobby : Lobby {
   public override async Task Join() {
     var entry = await SteamMatchmaking.JoinLobby(_id).ToTask<LobbyEnter_t>();
     foreach (var member in Members) {
-      member.SendMessage(kEmptyMessage);
+      // Empty message
+      member.SendMessage(new FixedBuffer());
     }
   }
 
@@ -92,20 +93,20 @@ internal class SteamLobby : Lobby {
                      "automatically flushed and cannot be manually flushed.");
   }
 
-  internal override void SendNetworkMessage(AccountHandle target, byte[] msg, int size = -1,
+  internal override void SendNetworkMessage(AccountHandle target, FixedBuffer msg,
                                           Reliability reliability = Reliability.Reliable) {
     var userId = new CSteamID(target.Id);
     var type = reliability == Reliability.Reliable ? EP2PSend.k_EP2PSendReliable : EP2PSend.k_EP2PSendUnreliable;
-    size = size < 0 ? msg.Length : size;
-    if (!SteamNetworking.SendP2PPacket(userId, msg, (uint)size, type)) {
+    var buffer = msg.ToArray();
+    if (!SteamNetworking.SendP2PPacket(userId, buffer, (uint)msg.Size, type)) {
       Debug.LogError($"Failed to send Steam P2P Packet to {userId}");
     }
+    ArrayPool<byte>.Shared.Return(buffer);
   }
 
-  public override void SendLobbyMessage(byte[] msg, int size = -1) {
-    size = size < 0 ? msg.Length : size;
-    if (!SteamMatchmaking.SendLobbyChatMsg(_id, msg, size)) {
-      Debug.LogError($"Failed to send Steam Lobby Packet.");
+  public override void SendLobbyMessage(FixedBuffer msg) {
+    if (!SteamMatchmaking.SendLobbyChatMsg(_id, msg.ToArray(), (int)msg.Size)) {
+      Debug.LogError("Failed to send Steam Lobby Packet.");
     }
   }
 

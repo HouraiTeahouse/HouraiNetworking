@@ -29,6 +29,8 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
     _lobby = lobby;
   }
 
+  internal int Count => _members.Count;
+
   internal LobbyMember Add(AccountHandle handle) {
     if (!_members.TryGetValue(handle, out LobbyMember player)) {
       player = new LobbyMember(_lobby, handle);
@@ -117,11 +119,10 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   /// duration of the call. It's contents will be copied.
   /// </summary>
   /// <param name="msg">the buffer of the message</param>
-  /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
   /// <param name="reliability">does the message need to be reliably sent</param>
-  public void Broadcast(byte[] msg, int size = -1, Reliability reliability = Reliability.Reliable) {
+  public void Broadcast(FixedBuffer msg, Reliability reliability = Reliability.Reliable) {
     foreach (var member in _members.Values) {
-      member.SendMessage(msg, size, reliability: reliability);
+      member.SendMessage(msg, reliability: reliability);
     }
   }
 
