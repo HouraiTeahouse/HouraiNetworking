@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Added more events to Lobby and LobbyMember.
  * Added a high performance CRC32 implemenation for ease of use.
  * Added shortcut IntegrationManager to simplify setup.
+ * Increased default max serialization size buffer to 65535 to match max packet sizes.
 
 ## [0.1.1] - 2019-10-23
  * Added Serializer/Deserializer overloads for reading/writing from raw byte pointers
