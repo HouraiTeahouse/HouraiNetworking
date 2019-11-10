@@ -11,7 +11,7 @@ namespace HouraiTeahouse.Networking {
 public static class SerializationConstants {
 
   public static readonly Encoding Encoding = new UTF8Encoding();
-  public static int kMaxMessageSize = 2048;
+  public static int kMaxMessageSize = (int)ushort.MaxValue;
 
 }
 
