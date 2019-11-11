@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Assertions;
 
 namespace HouraiTeahouse.Networking {
 
@@ -71,12 +72,12 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
 
   internal void Refresh() {
     if (_members.Count > 0) Clear();
-    var count = _lobby.MemberCount;
-    for (int i = 0; i < count; i++) {
+    foreach (var id in _lobby.GetMemberIds()) {
       // Use GetOrAdd in the case the underlying implemenation accidentally
       // returns multiple of the same member.
-      GetOrAdd(_lobby.GetMemberId(i));
+      GetOrAdd(id);
     }
+    Assert.IsTrue(_members.Count == _lobby.MemberCount);
   }
 
   // Read-only accessors are public

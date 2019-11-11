@@ -10,10 +10,7 @@ public interface IMetadataContainer {
   void SetMetadata(string key, string value);
   void DeleteMetadata(string key);
 
-  // Returns -1 if the container does not support iteration.
-  int GetMetadataCount();
-  // Returns null if the container does not support iteration.
-  string GetKeyByIndex(int idx);
+  IReadOnlyDictionary<string, string> GetAllMetadata();
 
 }
 
@@ -129,7 +126,7 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// </summary>
   public event Action<LobbyMember> OnMemberUpdated;
 
-  internal abstract ulong GetMemberId(int idx);
+  internal abstract IEnumerable<AccountHandle> GetMemberIds();
 
   /// <summary>
   /// A read-only map of members currently in the lobby.
@@ -186,21 +183,7 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   /// <param name="key">the key of the metadata to delete from</param>
   public abstract void DeleteMetadata(string key);
 
-  /// <summary>
-  /// Gets the number of metadata entries on the lobby.
-  /// This usually precedes calling GetKeyByIndex.
-  /// </summary>
-  /// <returns>the number of metadata elements in the lobby.</returns>
-  public abstract int GetMetadataCount();
-
-  /// <summary>
-  /// Gets a metadata key by it's index.
-  /// 
-  /// GetMetadataCount must be called first.
-  /// </summary>
-  /// <param name="idx">the index to fetch the key for</param>
-  /// <returns>the key for the index, or null/empty if out of range.</returns>
-  public abstract string GetKeyByIndex(int idx);
+  public abstract IReadOnlyDictionary<string, string> GetAllMetadata();
 
   internal virtual string GetMemberMetadata(AccountHandle handle, string key) =>
     throw new NotSupportedException();
@@ -209,9 +192,7 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
   internal virtual void DeleteMemberMetadata(AccountHandle handle, string key) =>
     throw new NotSupportedException();
 
-  internal virtual int GetMemberMetadataCount(AccountHandle handle) =>
-    throw new NotSupportedException();
-  internal virtual string GetMemberMetadataKey(AccountHandle handle, int idx) =>
+  internal virtual IReadOnlyDictionary<string, string> GetAllMemberMetadata(AccountHandle handle) =>
     throw new NotSupportedException();
 
   /// <summary>
@@ -255,23 +236,6 @@ public abstract class Lobby : INetworkSender, IMetadataContainer, IDisposable {
       member.OnUpdated += () => OnMemberUpdated?.Invoke(member);
     };
     OnMemberLeave += (member) => member.DispatchDisconnect();
-  }
-
-}
-
-public static class IMetadataContainerExtensions {
-
-  public static Dictionary<string, string> GetAllMetadata(this IMetadataContainer container) {
-    var count = container.GetMetadataCount();
-    if (count < 0) {
-      throw new ArgumentException("Metadata container does not support iteration");
-    }
-    var output = new Dictionary<string, string>();
-    for (var i = 0; i < count; i++) {
-      string key =  container.GetKeyByIndex(i);
-      output[key] = container.GetMetadata(key);
-    }
-    return output;
   }
 
 }

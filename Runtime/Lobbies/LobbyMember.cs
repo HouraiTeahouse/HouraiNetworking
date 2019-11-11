@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace HouraiTeahouse.Networking {
 
@@ -88,21 +90,7 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
   /// <param name="key">the key of the metadata to delete from</param>
   public void DeleteMetadata(string key) => Lobby.DeleteMemberMetadata(Id, key);
 
-  /// <summary>
-  /// Gets the number of metadata entries on the member.
-  /// This usually precedes calling GetKeyByIndex.
-  /// </summary>
-  /// <returns>the number of metadata elements in the member.</returns>
-  public int GetMetadataCount() => Lobby.GetMemberMetadataCount(Id);
-
-  /// <summary>
-  /// Gets a metadata key by it's index.
-  /// 
-  /// GetMetadataCount must be called first.
-  /// </summary>
-  /// <param name="idx">the index to fetch the key for</param>
-  /// <returns>the key for the index, or null/empty if out of range.</returns>
-  public string GetKeyByIndex(int idx) => Lobby.GetMemberMetadataKey(Id, idx);
+  public IReadOnlyDictionary<string, string> GetAllMetadata() => Lobby.GetAllMemberMetadata(Id);
 
   /// <summary>
   /// Sends a message to the user over the network.
