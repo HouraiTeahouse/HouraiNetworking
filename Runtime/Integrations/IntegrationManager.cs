@@ -23,9 +23,10 @@ public class IntegrationManager : MonoBehaviour {
 
     [Serializable]
     class SteamConfig : IntegrationConfig {
+        public uint AppId;
         public override string IntegrationName => "Steam";
         public override IIntegrationClient CreateClient() =>
-            new SteamIntegrationClient();
+            new SteamIntegrationClient(AppId);
     }
 
     [Serializable]

@@ -58,20 +58,32 @@ internal class DiscordLobby : Lobby {
   }
 
   public override int MemberCount => _lobbyManager.MemberCount(_data.Id);
-  internal override ulong GetMemberId(int idx) =>
-    (ulong)_lobbyManager.GetMemberUserId(_data.Id, idx);
+  internal override IEnumerable<AccountHandle> GetMemberIds()  {
+      var count = 0;
+      for (var i = 0; i < count; i++) {
+          yield return (ulong)_lobbyManager.GetMemberUserId(_data.Id, i);
+      }
+  }
 
   public override string GetMetadata(string key) =>
     _lobbyManager.GetLobbyMetadataValue(_data.Id, key);
-
-  public override string GetKeyByIndex(int idx) =>
-    _lobbyManager.GetLobbyMetadataKey(_data.Id, idx);
 
   public override void SetMetadata(string key, string value) => 
     GetUpdateTransaction().SetMetadata(key, value);
 
   public override void DeleteMetadata(string key) => 
     GetUpdateTransaction().DeleteMetadata(key);
+
+  public override IReadOnlyDictionary<string, string> GetAllMetadata() {
+      var metadata = new Dictionary<string, string>();
+      var count = _lobbyManager.LobbyMetadataCount(_data.Id);
+      for (var i = 0; i < count; i++) {
+        var key = _lobbyManager.GetLobbyMetadataKey(_data.Id, i);
+        var value = _lobbyManager.GetLobbyMetadataValue(_data.Id, key);
+        metadata[key] = value;
+      }
+      return metadata;
+  }
 
   internal override string GetMemberMetadata(AccountHandle handle, string key) =>
     _lobbyManager.GetMemberMetadataValue(_data.Id, (long)handle.Id, key);
@@ -81,8 +93,6 @@ internal class DiscordLobby : Lobby {
   
   internal override void DeleteMemberMetadata(AccountHandle handle, string key) =>
     GetMemberTransaction((long)handle.Id).DeleteMetadata(key);
-
-  public override int GetMetadataCount() => _lobbyManager.LobbyMetadataCount(_data.Id);
 
   public override Task Join() => _manager.JoinLobby(this);
 
