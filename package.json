@@ -11,7 +11,7 @@
     "com.houraiteahouse.core": "1.0.0",
     "com.houraiteahouse.lz4": "2.0.0",
     "com.discord.game-sdk": "2.5.5",
-    "com.facepunch.steamworks": "2.2.0"
+    "com.facepunch.steamworks": "2.2.1"
   },
   "publishConfig": {
     "registry": "https://upm.houraiteahouse.net"
