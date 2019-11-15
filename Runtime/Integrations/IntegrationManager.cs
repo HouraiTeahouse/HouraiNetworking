@@ -97,7 +97,11 @@ public class IntegrationManager : MonoBehaviour {
 
     void OnDestroy() {
         foreach (var integration in _integrations) {
-            (integration as IDisposable)?.Dispose();
+            try {
+                (integration as IDisposable)?.Dispose();
+            } catch (Exception e) {
+                Debug.LogError($"Failed to shutdown integration {integration.GetType()}: {e}");
+            }
         }
     }
 
