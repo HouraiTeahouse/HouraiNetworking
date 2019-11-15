@@ -2,8 +2,6 @@
 
 Platform based P2P networking with multiple backends.
 
----
-
 ## Features
 
  * Lobby based peer-to-peer transport, with pluggable backends. See below for
@@ -13,6 +11,7 @@ Platform based P2P networking with multiple backends.
  * High performance message serialization with next to zero garbage collection
    pressure.
  * Premade network topologies for faster iteration: Host-Client, Full Mesh
+ * IL2CPP Compatible - All integrations should work in IL2CPP out of the box
 
 ## Supported Backends
 
@@ -26,8 +25,9 @@ Some features may not be uniform across all platforms.
 |Matchmaking|✔️|✔️|❌|?|
 |Custom Metadata|✔️|✔️|?|?|
 |Host Migration|✔️|✔️|?|?|
-
----
+|Windows Support|✔️|✔️|?|?|
+|MacOS Support|✔️|✔️|?|?|
+|Linux Support|✔️|✔️|?|?|
 
 ## Installation
 Backroll is most easily installable via Unity Package Manager. In Unity 2018.3+,
