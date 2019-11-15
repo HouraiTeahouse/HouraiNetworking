@@ -71,6 +71,7 @@ internal class SteamLobbyManager : ILobbyManager {
     var queryBuilder = new LobbySearchBuilder(SteamMatchmaking.LobbyList);
     builder?.Invoke(queryBuilder);
     var result = await queryBuilder.RunAsync();
+    if (result == null) return new Lobby[0];
     var lobbies = new Lobby[result.Length];
     for (var i = 0; i < lobbies.Length; i++) {
         lobbies[i] = new SteamLobby(result[i], this);
