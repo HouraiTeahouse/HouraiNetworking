@@ -44,6 +44,7 @@ public sealed class LocalLobby : IDisposable {
     LocalLobby(ulong id, int capacity, ulong ownerId, 
                double packetLossPercent, Random packetLossRng) {
         Id = id;
+        OwnerId = ownerId;
         Capacity = capacity;
         _packetLossRng = packetLossRng;
         _connectedViews = new Dictionary<AccountHandle, LocalLobbyView>();
@@ -72,7 +73,10 @@ public sealed class LocalLobby : IDisposable {
     public void Delete() => Dispose();
 
     internal void Connect(LocalLobbyView view) {
-        var handle = new AccountHandle(view.Id);
+        if (_connectedViews.Count >= Capacity) {
+            throw new InvalidOperationException("Cannot join a lobby that is already full");
+        }
+        var handle = new AccountHandle(view.UserId);
         if (_connectedViews.ContainsKey(handle)) return;
         _metadata.AddMember(handle);
         _connectedViews[handle] = view;
@@ -82,7 +86,7 @@ public sealed class LocalLobby : IDisposable {
     }
 
     internal void Disconnect(LocalLobbyView view) {
-        var handle = new AccountHandle(view.Id);
+        var handle = new AccountHandle(view.UserId);
         if (!_connectedViews.ContainsKey(handle)) return;
         _metadata.RemoveMember(handle);
         _connectedViews.Remove(handle);
