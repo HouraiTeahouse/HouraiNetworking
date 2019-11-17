@@ -23,7 +23,7 @@ public sealed class LocalLobbyView : Lobby {
     /// </summary>
     public LocalLobby BaseLobby { get; }
 
-    public override ulong Id { get; }
+    public override ulong Id => BaseLobby.Id;
     public override ulong UserId { get; }
     public override ulong OwnerId => BaseLobby.OwnerId;
     public override LobbyType Type => BaseLobby.Type;
@@ -46,11 +46,11 @@ public sealed class LocalLobbyView : Lobby {
     public override IReadOnlyDictionary<string, string> GetAllMetadata() => BaseLobby.GetAllMetadata();
 
     internal override string GetMemberMetadata(AccountHandle handle, string key) =>
-        throw new NotSupportedException();
+        BaseLobby.GetMemberMetadata(handle, key);
     internal override void SetMemberMetadata(AccountHandle handle, string key, string value) =>
-        throw new NotSupportedException();
+        BaseLobby.SetMemberMetadata(handle, key, value);
     internal override void DeleteMemberMetadata(AccountHandle handle, string key) =>
-        throw new NotSupportedException();
+        BaseLobby.DeleteMemberMetadata(handle, key);
 
     public override void SendLobbyMessage(FixedBuffer message) {
         BaseLobby.SendLobbyMessage(new AccountHandle(UserId), message);

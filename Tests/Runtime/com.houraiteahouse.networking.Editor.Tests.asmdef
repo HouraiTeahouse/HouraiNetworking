@@ -1,0 +1,17 @@
+{
+    "name": "com.houraiteahouse.networking.EditorTests",
+    "references": [
+        "GUID:4487c07f4904b9441a8796ba81d3a533"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
