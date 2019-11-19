@@ -84,17 +84,21 @@ internal class SteamLobby : Lobby {
                      "automatically flushed and cannot be manually flushed.");
   }
 
-  internal override unsafe void SendNetworkMessage(AccountHandle target, FixedBuffer msg,
+  internal override unsafe void SendNetworkMessage(AccountHandle target, ReadOnlySpan<byte> msg,
                                                    Reliability reliability = Reliability.Reliable) {
     var type = reliability == Reliability.Reliable ? P2PSend.Reliable : P2PSend.Unreliable;
-    if (!SteamNetworking.SendP2PPacket(target.Id, msg.Start, (uint)msg.Size, 0, type)) {
-      Debug.LogError($"Failed to send Steam P2P Packet to {target.Id}");
+    fixed (byte* ptr = msg) {
+        if (!SteamNetworking.SendP2PPacket(target.Id, ptr, (uint)msg.Length, 0, type)) {
+            Debug.LogError($"Failed to send Steam P2P Packet to {target.Id}");
+        }
     }
   }
 
-  public override unsafe void SendLobbyMessage(FixedBuffer msg) {
-    if (!_lobby.SendChatBytes(msg.Start, (int)msg.Size)) {
-      Debug.LogError("Failed to send Steam Lobby Packet.");
+  public override unsafe void SendLobbyMessage(ReadOnlySpan<byte> msg) {
+    fixed (byte* ptr = msg) {
+        if (!_lobby.SendChatBytes(ptr, msg.Length)) {
+            Debug.LogError("Failed to send Steam Lobby Packet.");
+        }
     }
   }
 

@@ -6,8 +6,8 @@ namespace HouraiTeahouse.Networking {
 
 public interface IMessageProcessor {
 
-    void Apply(ref byte[] data, ref int size);
-    void Unapply(ref byte[] data, ref int size);
+    void Apply(ref ReadOnlySpan<byte> buffer);
+    void Unapply(ref ReadOnlySpan<byte> buffer);
 
 }
 

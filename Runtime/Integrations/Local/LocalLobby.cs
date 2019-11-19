@@ -95,7 +95,7 @@ public sealed class LocalLobby : IDisposable {
         }
     }
  
-    internal void SendLobbyMessage(AccountHandle source, FixedBuffer msg) {
+    internal void SendLobbyMessage(AccountHandle source, ReadOnlySpan<byte> msg) {
         foreach (var view in _connectedViews.Values) {
             if (view.Members.TryGetValue(source, out LobbyMember member)) {
                 view.DispatchLobbyMessage(member, msg);
@@ -103,7 +103,7 @@ public sealed class LocalLobby : IDisposable {
         }
     }
  
-    internal void SendNetworkMessage(AccountHandle source, AccountHandle target, FixedBuffer msg, Reliability reliability) {
+    internal void SendNetworkMessage(AccountHandle source, AccountHandle target, ReadOnlySpan<byte> msg, Reliability reliability) {
         // Simulate unreliablity
         if (reliability == Reliability.Unreliable && _packetLossRng.NextDouble() > _packetLossPercent) {
             return;

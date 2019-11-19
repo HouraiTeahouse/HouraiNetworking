@@ -71,21 +71,21 @@ public sealed class MessageHandlers : IDisposable {
   public unsafe void Send<T>(INetworkSender sender, in T msg,
                       Reliability reliability = Reliability.Reliable) 
                       where T : INetworkSerializable {
-    var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
-    var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
+    Span<byte> buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
+    var serializer = Serializer.Create(buffer);
     Serialize<T>(msg, ref serializer);
-    sender.SendMessage(serializer.ToFixedBuffer(), reliability);
+    sender.SendMessage(serializer, reliability);
   }
 
   public unsafe void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
                            Reliability reliability = Reliability.Reliable) 
                            where T : INetworkSerializable {
-    var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
-    var serializer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
+    Span<byte> buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
+    var serializer = Serializer.Create(buffer);
     Serialize<T>(msg, ref serializer);
     foreach (var sender in senders) {
-      sender.SendMessage(serializer.ToFixedBuffer(), reliability);
-    }
+      sender.SendMessage(serializer, reliability);
+    }Size 
   }
 
   void ThrowIfNotRegistered<T>() {
@@ -109,7 +109,7 @@ public sealed class MessageHandlers : IDisposable {
   public unsafe void Listen(INetworkReciever reciever) {
     if (_recievers.ContainsKey(reciever)) return;
     NetworkMessageHandler callback = (msg) => {
-      if (msg.Size <= 0) return;
+      if (msg.Length <= 0) return;
       var deserializer = Deserializer.Create(msg);
       byte header = deserializer.ReadByte();
       _handlers[header]?.Invoke(new NetworkMessage(reciever, deserializer));

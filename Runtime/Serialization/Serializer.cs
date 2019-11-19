@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -14,22 +15,22 @@ public unsafe struct Serializer {
   public int Position => (int)(_current - _start);
   public int Size => (int)(_end - _start);
 
-  public static Serializer Create(byte* buf, uint size) {
-    return new Serializer {
-      _start = buf,
-      _current = buf,
-      _end = buf + size,
-    };
+  public static Serializer Create(Span<byte> buffer) {
+      fixed (byte* ptr = buffer) {
+        return new Serializer {
+            _start = ptr,
+            _current = ptr,
+            _end = ptr + buffer.Length,
+        };
+      }
   }
 
-  public FixedBuffer ToFixedBuffer() =>
-    new FixedBuffer(_start, _current);
+  public static implicit operator ReadOnlySpan<byte>(Serializer buffer) =>
+    new ReadOnlySpan<byte>(buffer._start, buffer.Size);
 
   public string ToBase64String() {
-    var array =  ToFixedBuffer().ToArray();
-    var str = Convert.ToBase64String(array, 0, Position);
-    ArrayPool<byte>.Shared.Return(array);
-    return str;
+    var array =  ((ReadOnlySpan<byte>)this).ToArray();
+    return Convert.ToBase64String(array, 0, Position);
   }
 
   void CheckRemainingSize(int size) {

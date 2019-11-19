@@ -1,4 +1,5 @@
 ﻿using HouraiTeahouse.Compression;
+using System.Buffers;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Assertions;
 

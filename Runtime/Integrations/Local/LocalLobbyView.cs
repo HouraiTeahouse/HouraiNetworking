@@ -52,11 +52,11 @@ public sealed class LocalLobbyView : Lobby {
     internal override void DeleteMemberMetadata(AccountHandle handle, string key) =>
         BaseLobby.DeleteMemberMetadata(handle, key);
 
-    public override void SendLobbyMessage(FixedBuffer message) {
+    public override void SendLobbyMessage(ReadOnlySpan<byte> message) {
         BaseLobby.SendLobbyMessage(new AccountHandle(UserId), message);
     }
 
-    internal override void SendNetworkMessage(AccountHandle target, FixedBuffer message, 
+    internal override void SendNetworkMessage(AccountHandle target, ReadOnlySpan<byte> message, 
                                               Reliability reliability = Reliability.Reliable) {
         BaseLobby.SendNetworkMessage(new AccountHandle(UserId), target, message, reliability);
     }
