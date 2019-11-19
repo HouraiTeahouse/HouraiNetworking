@@ -38,8 +38,7 @@ internal class SteamLobbyManager : ILobbyManager {
                 var handled = false;
                 foreach (var lobby in _connectedLobbies.Values) {
                     if (lobby.Members.TryGetValue(handle, out LobbyMember member)) {
-                        var buffer = new FixedBuffer(ptr, dataSize);
-                        member.DispatchNetworkMessage(buffer);
+                        member.DispatchNetworkMessage(new ReadOnlySpan<byte>(_readBuffer, 0, (int)dataSize));
                         handled = true;
                     }
                 }

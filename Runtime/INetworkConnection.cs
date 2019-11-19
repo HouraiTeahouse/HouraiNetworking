@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace HouraiTeahouse.Networking {
 
-public delegate void NetworkMessageHandler(FixedBuffer buffer);
+public delegate void NetworkMessageHandler(ReadOnlySpan<byte> buffer);
 
 public interface INetworkSender {
 
-    void SendMessage(FixedBuffer buffer, Reliability reliability = Reliability.Reliable);
+    void SendMessage(ReadOnlySpan<byte> msg, Reliability reliability = Reliability.Reliable);
 
 }
 
@@ -23,12 +23,11 @@ public static unsafe class INetworkConnectionExtensions {
   public static void Send<T>(this INetworkSender connection, byte header, 
                              in T message, Reliability reliablity = Reliability.Reliable) 
                              where T : INetworkSerializable {
-    var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
-    var writer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
-    writer.Write(header);
-    message.Serialize(ref writer);
-    connection.SendMessage(writer.ToFixedBuffer(), reliablity);
-    (message as IDisposable)?.Dispose();
+    Span<byte> buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
+    var serializer = Serializer.Create(buffer);
+    serializer.Write(header);
+    message.Serialize(ref serializer);
+    connection.SendMessage(serializer, reliablity);
   }
 
   public static void SendToAll<T, TConnection>(this IEnumerable<TConnection> connections, byte header,
@@ -36,14 +35,13 @@ public static unsafe class INetworkConnectionExtensions {
                                                Reliability reliablity = Reliability.Reliable) 
                                                where T : INetworkSerializable
                                                where TConnection : INetworkSender {
-    var buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
-    var writer = Serializer.Create(buffer, (uint)SerializationConstants.kMaxMessageSize);
-    writer.Write(header);
-    message.Serialize(ref writer);
+    Span<byte> buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
+    var serializer = Serializer.Create(buffer);
+    serializer.Write(header);
+    message.Serialize(ref serializer);
     foreach (var connection in connections) {
-      connection.SendMessage(writer.ToFixedBuffer(), reliablity);
+      connection.SendMessage(serializer, reliablity);
     }
-    (message as IDisposable)?.Dispose();
   }
 
 }

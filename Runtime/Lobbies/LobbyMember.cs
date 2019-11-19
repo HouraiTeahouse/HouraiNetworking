@@ -101,37 +101,34 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
   /// <param name="msg">the buffer of the message</param>
   /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
   /// <param name="reliability">does the message need to be reliably sent</param>
-  public unsafe void SendMessage(FixedBuffer msg, Reliability reliability = Reliability.Reliable) {
+  public unsafe void SendMessage(ReadOnlySpan<byte> msg, Reliability reliability = Reliability.Reliable) {
     if (MessageProcessor == null) {
       Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
     } else {
       var buffer = msg.ToArray();
-      var size = (int)msg.Size;
+      var size = (int)msg.Length;
       MessageProcessor.Apply(ref buffer, ref size);
-      fixed (byte* ptr = buffer) {
-        msg = new FixedBuffer(ptr, size);
-        Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
-      }
+      msg = new Span<byte>(buffer, 0, size);
+      Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
     }
 
     _stats.PacketsSent++;
-    _stats.BytesSent += (ulong)msg.Size;
+    _stats.BytesSent += (ulong)msg.Length;
   }
 
-  internal unsafe void DispatchNetworkMessage(FixedBuffer msg) {
+  internal unsafe void DispatchNetworkMessage(ReadOnlySpan<byte> msg) {
     _stats.PacketsRecieved++;
-    _stats.BytesRecieved += (ulong)msg.Size;
+    _stats.BytesRecieved += (ulong)msg.Length;
 
     if (OnNetworkMessage == null) return;
     if (MessageProcessor == null) {
       OnNetworkMessage(msg);
     } else {
       var buffer = msg.ToArray();
-      var size = (int)msg.Size;
+      var size = (int)msg.Length;
       MessageProcessor.Unapply(ref buffer, ref size);
-      fixed (byte* ptr = buffer) {
-        OnNetworkMessage(new FixedBuffer(ptr, size));
-      }
+      msg = new Span<byte>(buffer, 0, size);
+      OnNetworkMessage(msg);
     }
   }
 

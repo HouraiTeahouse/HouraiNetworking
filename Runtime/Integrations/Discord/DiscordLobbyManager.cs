@@ -190,11 +190,9 @@ internal class DiscordLobbyManager : ILobbyManager {
   unsafe void OnNetworkMessage(long lobbyId, long userId, byte _, byte[] data) {
     LobbyMember member = GetLobbyMember(lobbyId, userId);
     if (member != null) {
-      fixed (byte* ptr = data) {
-        member.DispatchNetworkMessage(new FixedBuffer(ptr, data.Length));
-      }
+        member.DispatchNetworkMessage(new ReadOnlySpan<byte>(data, 0, data.Length));
     } else {
-      Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
+        Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
     }
   }
 
@@ -226,14 +224,12 @@ internal class DiscordLobbyManager : ILobbyManager {
   }
 
   unsafe void OnLobbyMessage(long lobbyId, long userId, byte[] data) {
-    LobbyMember member = GetLobbyMember(lobbyId, userId);
-    if (member != null) {
-      fixed (byte* ptr = data) {
-        member.Lobby.DispatchLobbyMessage(member, new FixedBuffer(ptr, data.Length));
-      }
-    } else {
-      Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
-    }
+        LobbyMember member = GetLobbyMember(lobbyId, userId);
+        if (member != null) {
+            member.Lobby.DispatchLobbyMessage(member, new ReadOnlySpan<byte>(data, 0, data.Length));
+        } else {
+            Debug.LogWarning($"[Discord] Unexpected network message for lobby: {lobbyId}, member: {userId}");
+        }
   }
 
   LobbyMember GetLobbyMember(long lobbyId, long userId) {

@@ -121,7 +121,7 @@ public sealed class LobbyMemberMap : IEnumerable<LobbyMember>, IDisposable {
   /// </summary>
   /// <param name="msg">the buffer of the message</param>
   /// <param name="reliability">does the message need to be reliably sent</param>
-  public void Broadcast(FixedBuffer msg, Reliability reliability = Reliability.Reliable) {
+  public void Broadcast(Span<byte> msg, Reliability reliability = Reliability.Reliable) {
     foreach (var member in _members.Values) {
       member.SendMessage(msg, reliability: reliability);
     }

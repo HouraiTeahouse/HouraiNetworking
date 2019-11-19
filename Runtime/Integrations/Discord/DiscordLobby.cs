@@ -101,8 +101,8 @@ internal class DiscordLobby : Lobby {
   public override void Delete() =>
     _lobbyManager.DeleteLobby(_data.Id, DiscordUtility.LogIfError);
 
-  public override void SendLobbyMessage(FixedBuffer msg) {
-    _lobbyManager.SendLobbyMessage(_data.Id, msg.ToExactArray(), DiscordUtility.LogIfError);
+  public override void SendLobbyMessage(ReadOnlySpan<byte> msg) {
+    _lobbyManager.SendLobbyMessage(_data.Id, msg.ToArray(), DiscordUtility.LogIfError);
   }
 
   public override void FlushChanges() {
@@ -125,9 +125,9 @@ internal class DiscordLobby : Lobby {
     }
   }
 
-  internal override void SendNetworkMessage(AccountHandle target, FixedBuffer buffer,
+  internal override void SendNetworkMessage(AccountHandle target, ReadOnlySpan<byte> buffer,
                                             Reliability reliability = Reliability.Reliable) {
-    _lobbyManager.SendNetworkMessage(_data.Id, (long)target.Id, (byte)reliability, buffer.ToExactArray());
+    _lobbyManager.SendNetworkMessage(_data.Id, (long)target.Id, (byte)reliability, buffer.ToArray());
   }
 
   DiscordApp.LobbyTransaction GetUpdateTransaction() {

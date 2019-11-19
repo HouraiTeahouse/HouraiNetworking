@@ -68,12 +68,10 @@ public unsafe struct Deserializer {
   /// <summary>
   /// Creates a Deserializer from a provided FixedBuffer.
   /// </summary>
-  public static Deserializer Create(FixedBuffer buf) {
-    return new Deserializer {
-      _start = buf.Start,
-      _current = buf.Start,
-      _end = buf.End,
-    };
+  public static Deserializer Create(ReadOnlySpan<byte> buf) {
+      fixed (byte* ptr = buf) {
+          return Create(ptr, (uint)buf.Length);
+      }
   }
 
   /// <summary>
