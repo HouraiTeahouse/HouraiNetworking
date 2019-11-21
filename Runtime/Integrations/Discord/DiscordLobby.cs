@@ -59,7 +59,7 @@ internal class DiscordLobby : Lobby {
 
   public override int MemberCount => _lobbyManager.MemberCount(_data.Id);
   internal override IEnumerable<AccountHandle> GetMemberIds()  {
-      var count = 0;
+      var count = _lobbyManager.MemberCount(_data.Id);
       for (var i = 0; i < count; i++) {
           yield return (ulong)_lobbyManager.GetMemberUserId(_data.Id, i);
       }
