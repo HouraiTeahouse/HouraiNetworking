@@ -85,7 +85,7 @@ public sealed class MessageHandlers : IDisposable {
     Serialize<T>(msg, ref serializer);
     foreach (var sender in senders) {
       sender.SendMessage(serializer, reliability);
-    }Size 
+    }
   }
 
   void ThrowIfNotRegistered<T>() {

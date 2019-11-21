@@ -92,45 +92,54 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
 
   public IReadOnlyDictionary<string, string> GetAllMetadata() => Lobby.GetAllMemberMetadata(Id);
 
-  /// <summary>
-  /// Sends a message to the user over the network.
-  /// 
-  /// In general, the msg buffer does not need to live longer than the 
-  /// duration of the call. It's contents will be copied.
-  /// </summary>
-  /// <param name="msg">the buffer of the message</param>
-  /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
-  /// <param name="reliability">does the message need to be reliably sent</param>
-  public unsafe void SendMessage(ReadOnlySpan<byte> msg, Reliability reliability = Reliability.Reliable) {
-    if (MessageProcessor == null) {
-      Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
-    } else {
-      var buffer = msg.ToArray();
-      var size = (int)msg.Length;
-      MessageProcessor.Apply(ref buffer, ref size);
-      msg = new Span<byte>(buffer, 0, size);
-      Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
+    /// <summary>
+    /// Sends a message to the user over the network.
+    /// 
+    /// In general, the msg buffer does not need to live longer than the 
+    /// duration of the call. It's contents will be copied.
+    /// </summary>
+    /// <param name="msg">the buffer of the message</param>
+    /// <param name="size">the size of the message, uses the size of the buffer if negative.</param>
+    /// <param name="reliability">does the message need to be reliably sent</param>
+    public void SendMessage(ReadOnlySpan<byte> msg, Reliability reliability = Reliability.Reliable) {
+        if (MessageProcessor == null) {
+            Lobby.SendNetworkMessage(Id, msg, reliability: reliability);
+            _stats.BytesSent += (ulong)msg.Length;
+        } else {
+            int outputSize = msg.Length;
+            while (true) {
+                Span<byte> output = stackalloc byte[outputSize];
+                if (!MessageProcessor.Apply(msg, ref output)) {
+                    outputSize *= 2;
+                    continue;
+                }
+                Lobby.SendNetworkMessage(Id, output, reliability: reliability);
+                _stats.BytesSent += (ulong)msg.Length;
+                break;
+            }
+        }
+        _stats.PacketsSent++;
     }
 
-    _stats.PacketsSent++;
-    _stats.BytesSent += (ulong)msg.Length;
-  }
+    internal void DispatchNetworkMessage(ReadOnlySpan<byte> msg) {
+        _stats.PacketsRecieved++;
+        _stats.BytesRecieved += (ulong)msg.Length;
 
-  internal unsafe void DispatchNetworkMessage(ReadOnlySpan<byte> msg) {
-    _stats.PacketsRecieved++;
-    _stats.BytesRecieved += (ulong)msg.Length;
-
-    if (OnNetworkMessage == null) return;
-    if (MessageProcessor == null) {
-      OnNetworkMessage(msg);
-    } else {
-      var buffer = msg.ToArray();
-      var size = (int)msg.Length;
-      MessageProcessor.Unapply(ref buffer, ref size);
-      msg = new Span<byte>(buffer, 0, size);
-      OnNetworkMessage(msg);
+        if (OnNetworkMessage == null) return;
+        if (MessageProcessor == null) {
+            OnNetworkMessage(msg);
+        } else {
+            int outputSize = msg.Length;
+            while (true) {
+                Span<byte> output = stackalloc byte[outputSize];
+                if (!MessageProcessor.Unapply(msg, ref output)) {
+                    outputSize *= 2;
+                    continue;
+                }
+                OnNetworkMessage(output);
+            }
+        }
     }
-  }
 
   internal void DispatchUpdate() => OnUpdated?.Invoke();
 
