@@ -64,12 +64,12 @@ There are notable issues with peer-to-peer networking:
 
 These are notable issues commonly seen, which is why the majority of the game
 industry nowadays aims for an authoritative client-server model of netplay.
-However, the main argument against this model, espeically for low-budget games
+However, the main argument against this model, especially for low-budget games
 that want netplay, is cost. Running a fleet of servers 24/7, and paying
 operators to maintain those servers is simply impossible for most small
 developers.
 
-Peer-to-peer netwroking only requires multiple players to share the
+Peer-to-peer networking only requires multiple players to share the
 same game version and an internet connection. No dedicated servers are required
 on the developer's end.
 
@@ -85,7 +85,7 @@ known public IPs. This returns to the issues of servers and cost. Luckily,
 Steam and Discord, now some of the largest companies in PC gaming, offer free
 access their relay networks to developers willing to integrate with their
 systems: allowing for more consistent netplay experience in exchange for some
-vendor lock-in. One of the goals of HouraiNetworking is to help allievate that
+vendor lock-in. One of the goals of HouraiNetworking is to help alleviate that
 vendor lock-in by abstracting platform level differences away.
 
 One other benefit to these solutions is use of relay services often incorproates
