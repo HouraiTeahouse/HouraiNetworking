@@ -1,3 +1,4 @@
+using HouraiTeahouse.Serialization;
 using System;
 using System.Collections.Generic;
 
@@ -54,7 +55,7 @@ public abstract class Peer : IDisposable {
   /// </summary>
   protected void Send<T>(INetworkSender sender, in T msg,
                          Reliability reliability = Reliability.Reliable)
-                         where T : INetworkSerializable {
+                         where T : ISerializable {
     MessageHandlers.Send<T>(sender, msg, reliability);
   }
 
@@ -67,7 +68,7 @@ public abstract class Peer : IDisposable {
   /// </summary>
   protected void Broadcast<T>(in T msg,
                               Reliability reliability = Reliability.Reliable)
-                              where T : INetworkSerializable {
+                              where T : ISerializable {
     MessageHandlers.Broadcast<T>(Lobby.Members, msg, reliability);
   }
 

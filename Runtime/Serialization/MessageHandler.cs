@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HouraiTeahouse.Serialization;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -26,7 +27,7 @@ public sealed class MessageHandlers : IDisposable {
     _handlers[code] += handler;
   }
 
-  public void RegisterHandler<T>(byte header, Handler<T> handler) where T : INetworkSerializable, new() {
+  public void RegisterHandler<T>(byte header, Handler<T> handler) where T : ISerializable, new() {
     if (handler == null) throw new ArgumentNullException(nameof(handler));
     if (_headers.TryGetValue(typeof(T), out byte storedHeader)) {
       if (storedHeader != header) {
@@ -42,7 +43,7 @@ public sealed class MessageHandlers : IDisposable {
     });
   }
 
-  public void RegisterHandler<T>(byte header, ReceiverHandler<T> handler) where T : INetworkSerializable, new() {
+  public void RegisterHandler<T>(byte header, ReceiverHandler<T> handler) where T : ISerializable, new() {
     if (handler == null) throw new ArgumentNullException(nameof(handler));
     if (_headers.TryGetValue(typeof(T), out byte storedHeader)) {
       if (storedHeader != header) {
@@ -58,33 +59,35 @@ public sealed class MessageHandlers : IDisposable {
     });
   }
 
-  public void Serialize<T>(in T msg, ref Serializer serializer) where T : INetworkSerializable {
+  public void Serialize<TMsg, TSerializer>(in TMsg msg, ref TSerializer serializer) 
+                                            where TMsg : ISerializable
+                                            where TSerializer : struct, ISerializer {
     byte header;
-    if (_headers.TryGetValue(typeof(T), out header)) {
+    if (_headers.TryGetValue(typeof(TMsg), out header)) {
       serializer.Write(header);
       msg.Serialize(ref serializer);
     } else {
-      throw new InvalidOperationException($"Type {typeof(T)} is not registered.");
+      throw new InvalidOperationException($"Type {typeof(TMsg)} is not registered.");
     }
   }
 
   public unsafe void Send<T>(INetworkSender sender, in T msg,
                       Reliability reliability = Reliability.Reliable) 
-                      where T : INetworkSerializable {
+                      where T : ISerializable {
     Span<byte> buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
-    var serializer = Serializer.Create(buffer);
-    Serialize<T>(msg, ref serializer);
-    sender.SendMessage(serializer, reliability);
+    var serializer = FixedSizeSerializer.Create(buffer);
+    Serialize<T, FixedSizeSerializer>(msg, ref serializer);
+    sender.SendMessage(serializer.AsReadOnlySpan(), reliability);
   }
 
   public unsafe void Broadcast<T>(IEnumerable<INetworkSender> senders, in T msg,
                            Reliability reliability = Reliability.Reliable) 
-                           where T : INetworkSerializable {
+                           where T : ISerializable {
     Span<byte> buffer = stackalloc byte[SerializationConstants.kMaxMessageSize];
-    var serializer = Serializer.Create(buffer);
-    Serialize<T>(msg, ref serializer);
+    var serializer = FixedSizeSerializer.Create(buffer);
+    Serialize<T, FixedSizeSerializer>(msg, ref serializer);
     foreach (var sender in senders) {
-      sender.SendMessage(serializer, reliability);
+      sender.SendMessage(serializer.AsReadOnlySpan(), reliability);
     }
   }
 
@@ -110,7 +113,7 @@ public sealed class MessageHandlers : IDisposable {
     if (_recievers.ContainsKey(reciever)) return;
     NetworkMessageHandler callback = (msg) => {
       if (msg.Length <= 0) return;
-      var deserializer = Deserializer.Create(msg);
+      var deserializer = FixedSizeDeserializer.Create(msg);
       byte header = deserializer.ReadByte();
       _handlers[header]?.Invoke(new NetworkMessage(reciever, deserializer));
     };
