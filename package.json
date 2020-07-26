@@ -2,7 +2,7 @@
   "author": "Hourai Teahouse",
   "name": "com.houraiteahouse.networking",
   "displayName": "Hourai Networking",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "P2P Networking with multiple backends",
   "homepage": "https://github.com/HouraiTeahouse/HouraiNetworking",
   "bugs": "https://github.com/HouraiTeahouse/HouraiNetworking/issues",
