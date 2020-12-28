@@ -27,6 +27,8 @@ internal class SteamLobbyManager : ILobbyManager {
     SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberLeave;
     SteamMatchmaking.OnLobbyMemberKicked += OnLobbyMemberRemoved;
     SteamMatchmaking.OnLobbyMemberBanned += OnLobbyMemberRemoved;
+
+    SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
   }
 
     public unsafe void Update() {
@@ -61,7 +63,7 @@ internal class SteamLobbyManager : ILobbyManager {
         steamLobby.SetData(kvp.Key, kvp.Value.ToString());
       }
     }
-    var lobby = new SteamLobby(steamLobby, this);
+    var lobby = new SteamLobby(steamLobby, this, true);
     _connectedLobbies.Add(steamLobby.Id, lobby);
     return lobby;
   }
@@ -73,7 +75,7 @@ internal class SteamLobbyManager : ILobbyManager {
     if (result == null) return new Lobby[0];
     var lobbies = new Lobby[result.Length];
     for (var i = 0; i < lobbies.Length; i++) {
-        lobbies[i] = new SteamLobby(result[i], this);
+        lobbies[i] = new SteamLobby(result[i], this, false);
     }
     return lobbies;
   }
@@ -87,14 +89,14 @@ internal class SteamLobbyManager : ILobbyManager {
       }
 
     public ILobbySearchBuilder Filter(string key, SearchComparison comparison, string value) {
-      var comp = (LobbyComparison)((int)comparison);
-      _query.AddStringFilter(key, value, comp);
+      //var comp = (LobbyComparison)((int)comparison);
+      //_query.AddStringFilter(key, value, comp);
       return this;
     }
 
     public ILobbySearchBuilder Filter(string key, SearchComparison comparison, int value) {
-      var comp = (LobbyComparison)((int)comparison);
-      _query.AddNumericalFilter(key, value, comp);
+      //var comp = (LobbyComparison)((int)comparison);
+      //_query.AddNumericalFilter(key, value, comp);
       return this;
     }
 
@@ -124,6 +126,7 @@ internal class SteamLobbyManager : ILobbyManager {
     SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberLeave;
     SteamMatchmaking.OnLobbyMemberKicked += OnLobbyMemberRemoved;
     SteamMatchmaking.OnLobbyMemberBanned += OnLobbyMemberRemoved;
+    SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
   }
 
   internal async Task JoinLobby(SteamLobby lobby) {
@@ -217,6 +220,8 @@ internal class SteamLobbyManager : ILobbyManager {
       Debug.LogWarning($"[Steam] Unexpected lobby member update event for lobby: {steamLobby.Id}");
       return;
     }
+
+    Debug.Log("member changed!!!");
     member.DispatchUpdate();
   }
 
