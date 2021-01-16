@@ -27,7 +27,7 @@ internal class SteamLobby : Lobby {
 
   readonly SteamLobbyManager _manager;
 
-  public SteamLobby(Steamworks.Data.Lobby lobby, SteamLobbyManager manager, bool connected) : base() {
+  public SteamLobby(Steamworks.Data.Lobby lobby, SteamLobbyManager manager, bool connected = false) : base() {
     Assert.IsNotNull(manager);
     _manager = manager;
     _lobby = lobby;
@@ -67,7 +67,7 @@ internal class SteamLobby : Lobby {
     if (handle.Id != UserId) {
       throw new InvalidOperationException("Cannnot set the metadata of a Steam lobby member other than the current user.");
     }
-    _lobby.SetMemberData( key, value);
+    _lobby.SetMemberData(key, value);
   }
 
   internal override void DeleteMemberMetadata(AccountHandle handle, string key) =>
@@ -99,11 +99,7 @@ internal class SteamLobby : Lobby {
   }
 
   public override unsafe void SendLobbyMessage(ReadOnlySpan<byte> msg) {
-    fixed (byte* ptr = msg) {
-        //if (!_lobby.SendChatBytes(ptr, msg.Length)) {
-        //    Debug.LogError("Failed to send Steam Lobby Packet.");
-        //}
-    }
+    throw new NotImplementedException("Steam Facepunch API no longer supports sending bytes");
   }
 
 }
