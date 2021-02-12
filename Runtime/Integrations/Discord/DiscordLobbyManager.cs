@@ -47,6 +47,7 @@ internal class DiscordLobbyManager : ILobbyManager {
           future.SetException(DiscordUtility.ToError(result));
           return;
         }
+        SetupLobbyChannels(lobby.Id);
         var outputLobby = new DiscordLobby(this, lobby);
         _connectedLobbies.Add(lobby.Id, outputLobby);
         var secret = _lobbyManager.GetLobbyActivitySecret(lobby.Id);
@@ -129,7 +130,7 @@ internal class DiscordLobbyManager : ILobbyManager {
     }
     Assert.IsNotNull(discordLobby);
     var future = new TaskCompletionSource<object>();
-    _lobbyManager.ConnectLobby((long)discordLobby.Id, discordLobby.Secret, 
+    _lobbyManager.ConnectLobby((long)discordLobby.Id, discordLobby.Secret,
       (DiscordApp.Result result, ref DiscordApp.Lobby lobby) => {
         if (result != DiscordApp.Result.Ok) {
           future.SetException(DiscordUtility.ToError(result));
@@ -137,9 +138,7 @@ internal class DiscordLobbyManager : ILobbyManager {
         }
         discordLobby._data = lobby;
         _connectedLobbies.Add(lobby.Id, discordLobby);
-        _lobbyManager.ConnectNetwork(lobby.Id);
-        _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Reliable, true);
-        _lobbyManager.OpenNetworkChannel(lobby.Id, (byte)Reliability.Unreliable, false);
+        SetupLobbyChannels(lobby.Id);
         discordLobby.Members.Refresh();
         future.SetResult(null);
       });
@@ -162,6 +161,12 @@ internal class DiscordLobbyManager : ILobbyManager {
     foreach (var lobby in _connectedLobbies.Values) {
       lobby.FlushChanges();
     }
+  }
+
+  void SetupLobbyChannels(long lobbyId) {
+    _lobbyManager.ConnectNetwork(lobbyId);
+    _lobbyManager.OpenNetworkChannel(lobbyId, (byte)Reliability.Reliable, true);
+    _lobbyManager.OpenNetworkChannel(lobbyId, (byte)Reliability.Unreliable, false);
   }
 
   // Callbacks
