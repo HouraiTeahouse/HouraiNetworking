@@ -1,10 +1,11 @@
 {
     "name": "com.houraiteahouse.networking.Runtime",
     "references": [
-        "GUID:60c82de689ffd1949bda7e753c3a1857",
-        "GUID:c4a0e28f46aff7444a36a1b96d3fcc54",
-        "GUID:8e0c853f955158b44b48106eeace25c2",
-        "GUID:dd647704d3729ef49b0dc1a51cced19b"
+        "Discord",
+        "com.houraiteahouse.core.Runtime",
+        "com.houraiteahouse.lz4.Runtime",
+        "com.facepunch.steamworks.Runtime",
+        "com.houraiteahouse.serialization"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

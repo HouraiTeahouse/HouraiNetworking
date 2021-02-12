@@ -1,3 +1,5 @@
+using HouraiTeahouse.Serialization;
+
 namespace HouraiTeahouse.Networking.Topologies {
 
 /// <summary>
@@ -51,7 +53,7 @@ public abstract class HostClientPeer : Peer {
   /// </summary>
   protected void ClientSend<T>(in T msg,
                                Reliability reliability = Reliability.Reliable)
-                               where T : INetworkSerializable {
+                               where T : ISerializable {
     if (IsHost) return;
     MessageHandlers.Send<T>(Lobby.Members.Owner, msg, reliability);
   }
