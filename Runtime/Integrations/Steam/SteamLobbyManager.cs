@@ -27,6 +27,7 @@ internal class SteamLobbyManager : ILobbyManager {
     SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberLeave;
     SteamMatchmaking.OnLobbyMemberKicked += OnLobbyMemberRemoved;
     SteamMatchmaking.OnLobbyMemberBanned += OnLobbyMemberRemoved;
+    SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
   }
 
     public unsafe void Update() {
@@ -61,7 +62,7 @@ internal class SteamLobbyManager : ILobbyManager {
         steamLobby.SetData(kvp.Key, kvp.Value.ToString());
       }
     }
-    var lobby = new SteamLobby(steamLobby, this);
+    var lobby = new SteamLobby(steamLobby, this, true);
     _connectedLobbies.Add(steamLobby.Id, lobby);
     return lobby;
   }
@@ -87,15 +88,39 @@ internal class SteamLobbyManager : ILobbyManager {
       }
 
     public ILobbySearchBuilder Filter(string key, SearchComparison comparison, string value) {
-      var comp = (LobbyComparison)((int)comparison);
-      _query.AddStringFilter(key, value, comp);
+      // Facepunch Steamworks no longer support comparison of strings greater or lesser, only equal.
+      // This is untested.
+      _query.WithKeyValue(key, value);
       return this;
     }
 
     public ILobbySearchBuilder Filter(string key, SearchComparison comparison, int value) {
-      var comp = (LobbyComparison)((int)comparison);
-      _query.AddNumericalFilter(key, value, comp);
-      return this;
+      // This is untested.
+      if (comparison == SearchComparison.LessThanOrEqual)
+      {
+        _query.WithLower(key, value + 1);
+      }
+      else if (comparison == SearchComparison.LessThan)
+      {
+        _query.WithLower(key, value);
+      }
+      else if (comparison == SearchComparison.Equal)
+      {
+        _query.WithEqual(key, value + 1);
+      }
+      else if (comparison == SearchComparison.GreaterThan)
+      {
+        _query.WithHigher(key, value);
+      }
+      else if (comparison == SearchComparison.GreaterThanOrEqual)
+      {
+        _query.WithHigher(key, value + 1);
+      }
+      else if (comparison == SearchComparison.NotEqual)
+      {
+        _query.WithNotEqual(key, value);
+      }
+        return this;
     }
 
     public ILobbySearchBuilder Sort(string key, string value) {
@@ -124,6 +149,7 @@ internal class SteamLobbyManager : ILobbyManager {
     SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberLeave;
     SteamMatchmaking.OnLobbyMemberKicked += OnLobbyMemberRemoved;
     SteamMatchmaking.OnLobbyMemberBanned += OnLobbyMemberRemoved;
+    SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
   }
 
   internal async Task JoinLobby(SteamLobby lobby) {

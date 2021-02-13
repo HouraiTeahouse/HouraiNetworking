@@ -16,7 +16,7 @@ public class LobbyMember : INetworkConnection, IMetadataContainer, IDisposable {
   public static IMessageProcessor MessageProcessor;
 
   static LobbyMember() {
-    MessageProcessor = new LZFCompressor();
+    MessageProcessor = null;
   }
 
   public enum ConnectionState {
