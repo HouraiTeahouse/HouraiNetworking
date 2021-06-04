@@ -80,21 +80,39 @@ internal class SteamLobbyManager : ILobbyManager {
 
   class LobbySearchBuilder : ILobbySearchBuilder {
 
-      readonly LobbyQuery _query;
+      LobbyQuery _query;
 
       public LobbySearchBuilder(LobbyQuery query) {
           _query = query;
       }
 
     public ILobbySearchBuilder Filter(string key, SearchComparison comparison, string value) {
-      var comp = (LobbyComparison)((int)comparison);
-      _query.AddStringFilter(key, value, comp);
+      if (comparison != SearchComparison.Equal) {
+        throw new System.ArgumentException("Only SearchComparison.Equal is supported for string filters on Steam");
+      }
+      _query.WithKeyValue(key, value);
       return this;
     }
 
     public ILobbySearchBuilder Filter(string key, SearchComparison comparison, int value) {
-      var comp = (LobbyComparison)((int)comparison);
-      _query.AddNumericalFilter(key, value, comp);
+      switch (comparison) {
+        case SearchComparison.LessThanOrEqual:
+          throw new System.ArgumentException("LessThanOrEqual is not supported on Steam matchmaking search");
+        case SearchComparison.LessThan:
+          _query.WithLower(key, value);
+          break;
+        case SearchComparison.Equal:
+          _query.WithEqual(key, value);
+          break;
+        case SearchComparison.GreaterThan:
+          _query.WithHigher(key, value);
+          break;
+        case SearchComparison.GreaterThanOrEqual:
+          throw new System.ArgumentException("GreaterThanOrEqual is not supported on Steam matchmaking search");
+        case SearchComparison.NotEqual:
+          _query.WithNotEqual(key, value);
+          break;
+      }
       return this;
     }
 

@@ -9,7 +9,7 @@
   "repository": "github:HouraiTeahouse/HouraiNetworking",
   "dependencies": {
     "com.discord.game-sdk": "2.5.5",
-    "com.facepunch.steamworks": "2.2.1",
+    "com.facepunch.steamworks": "2.3.2",
     "com.houraiteahouse.core": "1.0.1",
     "com.houraiteahouse.lz4": "2.0.1",
     "com.houraiteahouse.serialization": "1.0.0"
